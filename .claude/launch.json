@@ -1,9 +1,10 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "pon-forest", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "game"], "port": 8765 },
-    { "name": "hitotsubu-teien", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8766", "--bind", "127.0.0.1", "--directory", "game2"], "port": 8766 },
-    { "name": "emberdeep", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8767", "--bind", "127.0.0.1", "--directory", "game3"], "port": 8767 },
-    { "name": "lumen-reel", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8768", "--bind", "127.0.0.1", "--directory", "game4"], "port": 8768 }
+    {"name": "pon-forest", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "game"], "port": 8765},
+    {"name": "hitotsubu-teien", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8766", "--bind", "127.0.0.1", "--directory", "game2"], "port": 8766},
+    {"name": "emberdeep", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8767", "--bind", "127.0.0.1", "--directory", "game3"], "port": 8767},
+    {"name": "lumen-reel", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8768", "--bind", "127.0.0.1", "--directory", "game4"], "port": 8768},
+    {"name": "reel-delve", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "8769", "--bind", "127.0.0.1", "--directory", "game5"], "port": 8769}
   ]
 }
