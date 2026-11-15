@@ -17,7 +17,7 @@
 | 01 | [ぽん、と森は灯る](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game/index.html) | 物理ショット・探索 | マウス | Claude Fable 5.2 |
 | 02 | [ひとつぶ庭園](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game2/index.html) | 粒の箱庭パズル | マウス | Claude Fable 5.2 |
 | 03 | [EMBERDEEP ― 燈守りの坑道](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game3/index.html) | トップダウン・アクションRPG | キーボード＋マウス | Claude Fable 5.2 |
-| 04 | [LUMEN REEL ― まわる灯台と三つの海路](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game4/index.html) | リール構築パズル | キーボード＋マウス | Claude |
+| 04 | [LUMEN REEL ― まわる灯台と三つの海路](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game4/index.html) | リール構築パズル | キーボード＋マウス | Claude Fable 5.2 |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
