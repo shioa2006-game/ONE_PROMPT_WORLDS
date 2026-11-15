@@ -60,7 +60,8 @@ assets/
   js/main.js                カードの組み立てと背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
 game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/   各作品（それぞれ index.html から起動）
-Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書
+Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書（01〜08、Claude Fable 5.2）
+Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09、Claude Opus 5.5）
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
 
