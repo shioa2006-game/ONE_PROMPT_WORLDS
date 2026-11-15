@@ -116,5 +116,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-15',
     accent: '#c8452f'
+  },
+  {
+    title: 'ひつじが いっぴき',
+    subtitle: '牧羊犬コロの一日',
+    genre: '群れ追いアクション',
+    description: 'マウスの先へ走る牧羊犬になって、ひつじの群れを小屋まで送りとどける。歩けば群れは まとまって進み、走れば おどろいて散る。朝から夜まで、九つの牧場をまわる。',
+    path: 'game8/index.html',
+    thumbnail: 'assets/thumbs/hitsuji-ga-ippiki.webp',
+    thumbnailSmall: 'assets/thumbs/hitsuji-ga-ippiki-640.webp',
+    thumbnailAlt: '「ひつじが いっぴき」のプレイ画面。朝の牧場で、白黒の牧羊犬が ひつじの群れを柵の切れ目へ押していく。',
+    controls: 'マウス',
+    ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-15',
+    accent: '#a8d283'
   }
 ];
