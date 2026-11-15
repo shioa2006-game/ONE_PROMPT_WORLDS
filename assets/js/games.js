@@ -144,5 +144,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-15',
     accent: '#8cc8f0'
+  },
+  {
+    title: 'ぐるり、夜まつり',
+    subtitle: 'ゆいと 妖の 参道',
+    genre: 'なぞりパズル・バトル',
+    description: '同じ玉を なぞって つなぎ、なぞりはじめに もどれば「輪」。紅白のひもで 妖（あやかし）を ぐるっと囲むと、ともだちになって 行列に ついてくる。夏まつりの夜、妖で いっぱいの参道をぬけて 社をめざす。',
+    path: 'game10/index.html',
+    thumbnail: 'assets/thumbs/gururi-yomatsuri.webp',
+    thumbnailSmall: 'assets/thumbs/gururi-yomatsuri-640.webp',
+    thumbnailAlt: '「ぐるり、夜まつり」のプレイ画面。鳥居の下の盤で、小判の玉を 紅白のひもで なぞって輪にし、中の鬼火を 囲んでいる。左には 浴衣の女の子と、ともだちになった妖の行列。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-16',
+    accent: '#ff7b8f'
   }
 ];
