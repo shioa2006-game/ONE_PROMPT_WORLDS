@@ -1,0 +1,11 @@
+{"bot":"smart","seed":1,"completed":true,"shots":31,"planted":22,"lost":9,"fireflies":1,"ownAtEnd":23,"ms":62686}
+near bell 1:ok@1  gate 1:ok@2  near bells 2:ok@5  gate 2:ok@6  cross stream:ok@9  gate 3:ok@10  far island:ok@14  hidden garden:ok@15  gate 4:ok@22  arena:ok@25  great tree:ok@31
+{"bot":"smart","seed":2,"completed":true,"shots":32,"planted":25,"lost":7,"fireflies":2,"ownAtEnd":26,"ms":43677}
+near bell 1:ok@1  gate 1:ok@2  near bells 2:ok@5  gate 2:ok@6  cross stream:ok@9  gate 3:ok@10  far island:ok@14  hidden garden:ok@15  gate 4:ok@22  arena:ok@25  great tree:ok@32
+{"bot":"smart","seed":3,"completed":true,"shots":29,"planted":24,"lost":5,"fireflies":1,"ownAtEnd":25,"ms":43971}
+near bell 1:ok@1  gate 1:ok@2  near bells 2:ok@5  gate 2:ok@6  cross stream:ok@9  gate 3:ok@10  far island:ok@14  hidden garden:ok@15  gate 4:ok@18  arena:ok@21  great tree:ok@29
+{"bot":"naive","seed":1,"completed":false,"shots":398,"gatesOpened":1,"furthestX":1945,"goalIndexReached":"2 / 9"}
+{"bot":"naive","seed":2,"completed":false,"shots":398,"gatesOpened":1,"furthestX":2315,"goalIndexReached":"2 / 9"}
+{"bot":"naive","seed":3,"completed":false,"shots":398,"gatesOpened":1,"furthestX":2273,"goalIndexReached":"2 / 9"}
+{"bot":"naive","seed":4,"completed":false,"shots":398,"gatesOpened":1,"furthestX":2261,"goalIndexReached":"2 / 9"}
+{"bot":"naive","seed":5,"completed":false,"shots":398,"gatesOpened":1,"furthestX":2318,"goalIndexReached":"2 / 9"}

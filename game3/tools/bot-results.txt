@@ -1,0 +1,10 @@
+{"mode":"skilled","seed":1,"ended":true,"time":4.9,"lvl":10,"deaths":0,"kills":61,"cry":59,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"skilled","seed":2,"ended":true,"time":4.9,"lvl":10,"deaths":0,"kills":60,"cry":57,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"skilled","seed":3,"ended":true,"time":4.7,"lvl":10,"deaths":0,"kills":59,"cry":47,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"skilled","seed":4,"ended":true,"time":5,"lvl":10,"deaths":0,"kills":59,"cry":103,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"skilled","seed":5,"ended":true,"time":5,"lvl":10,"deaths":0,"kills":61,"cry":59,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"naive","seed":1,"ended":false,"time":13.9,"lvl":10,"deaths":41,"kills":65,"cry":55,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"naive","seed":2,"ended":false,"time":13.7,"lvl":10,"deaths":41,"kills":60,"cry":51,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"naive","seed":3,"ended":false,"time":13.5,"lvl":10,"deaths":41,"kills":68,"cry":81,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"naive","seed":4,"ended":false,"time":13.3,"lvl":10,"deaths":41,"kills":61,"cry":120,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
+{"mode":"naive","seed":5,"ended":false,"time":14.3,"lvl":11,"deaths":41,"kills":70,"cry":108,"forge":{"blade":3,"cloak":3},"charms":["magnet","leech","tempo"]}
