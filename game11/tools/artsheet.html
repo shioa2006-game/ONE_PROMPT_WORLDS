@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>絵の一覧（検証用）</title>
+<style>body{margin:0;background:#cdbf9c;font:12px sans-serif}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="../js/core.js"></script><script src="../js/data.js"></script><script src="../js/art.js"></script>
+<script>
+// 検証用：すべての絵を 一覧にする（?px=64 で大きさを かえられる）
+const q = new URLSearchParams(location.search);
+const px = +(q.get('px') || 72);
+const keys = Object.keys(TJ.TYPES).concat(['kakashi_m', 'k_yakko', 'k_kaku', 'k_semi', 'k_ren', 'k_oodako']);
+const items = [];
+for (const k of keys) { const t = TJ.TYPES[k]; const nv = t ? t.v : 1; for (let v = 0; v < nv; v++) items.push([k, v]); }
+const cols = Math.floor(1280 / (px + 24));
+const cv = document.getElementById('c');
+cv.width = 1280; cv.height = Math.ceil(items.length / cols) * (px + 30) + 10;
+const c = cv.getContext('2d');
+items.forEach(([k, v], i) => {
+  const x = (i % cols) * (px + 24) + 12, y = Math.floor(i / cols) * (px + 30) + 6;
+  c.fillStyle = (i % 2) ? '#c4b48e' : '#d6c9a8'; c.fillRect(x - 4, y, px + 16, px + 26);
+  const t = TJ.TYPES[k];
+  c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.ellipse(x + px / 2 + 4, y + px * 0.95, px * 0.35, px * 0.08, 0, 0, 6.28); c.fill();
+  const sp = TJ.Art.sprite(k, v, px);
+  const sc = px / sp.unit;
+  const lift = (t && t.flat) ? 0 : 0;
+  c.drawImage(sp, x + 4 + px / 2 - sp.width * sc / 2, y + 4 + px / 2 - sp.height * sc / 2, sp.width * sc, sp.height * sc);
+  c.fillStyle = '#222'; c.font = '10px sans-serif'; c.fillText(k + (v ? ':' + v : ''), x, y + px + 20);
+});
+</script></body></html>
