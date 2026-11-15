@@ -18,6 +18,7 @@
  *   thumbnailAlt   画像の代替テキスト（任意）
  *   controls       主な操作（例: 'マウス'）
  *   ai             制作AI
+ *   createdDate    作成日（任意。YYYY-MM-DD 形式）
  *   accent         カードのアクセント色
  */
 window.OPW_GAMES = [
@@ -31,6 +32,7 @@ window.OPW_GAMES = [
     thumbnailAlt: '「ぽん、と森は灯る」のタイトル画面。ほたるの光る夜の森に、小さなキノコがひとつ。',
     controls: 'マウス',
     ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-14',
     accent: '#86e8c0'
   },
   {
@@ -43,6 +45,7 @@ window.OPW_GAMES = [
     thumbnailAlt: '「ひとつぶ庭園」のプレイ画面。月夜のびんに水を注ぎ、くぼみの花がひらいている。',
     controls: 'マウス',
     ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-14',
     accent: '#ffa8d4'
   },
   {
@@ -56,6 +59,7 @@ window.OPW_GAMES = [
     thumbnailAlt: '「EMBERDEEP ― 燈守りの坑道」のタイトル画面。闇の中に灯るランタン。',
     controls: 'キーボード＋マウス',
     ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-14',
     accent: '#ffb85c'
   }
 ];

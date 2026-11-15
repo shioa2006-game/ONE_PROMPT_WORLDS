@@ -98,6 +98,11 @@
     var maker = el('p', 'maker');
     maker.appendChild(el('span', 'maker-label', '制作AI'));
     maker.appendChild(el('span', 'maker-name', game.ai || 'Claude'));
+    if (game.createdDate) {
+      var date = el('time', 'maker-date', game.createdDate.slice(2).replace(/-/g, '/') + ' 作成');
+      date.dateTime = game.createdDate;
+      maker.appendChild(date);
+    }
     foot.appendChild(maker);
 
     var play = el('a', 'play');

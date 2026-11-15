@@ -460,6 +460,11 @@ a { color: inherit; }
   color: var(--text);
 }
 
+.maker-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* PLAY: the link stretches over the whole card */
 .play {
   position: static;
