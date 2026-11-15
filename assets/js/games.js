@@ -102,5 +102,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-15',
     accent: '#e0764a'
+  },
+  {
+    title: '切りもどし',
+    subtitle: '鋏と春の小さな鉢',
+    genre: '剪定パズル',
+    description: '枝を切ると、切り口から二つの芽が吹く。春を呼ぶと、芽がのびる。鋏ひとつで木の形を決めて、ひだまりに花を咲かせる。',
+    path: 'game7/index.html',
+    thumbnail: 'assets/thumbs/kirimodoshi.webp',
+    thumbnailSmall: 'assets/thumbs/kirimodoshi-640.webp',
+    thumbnailAlt: '「切りもどし」のプレイ画面。和紙の上の鉢植えに鋏を当てると、切り落とす枝が朱色で示される。',
+    controls: 'マウス＋キーボード',
+    ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-15',
+    accent: '#c8452f'
   }
 ];

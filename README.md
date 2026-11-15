@@ -20,6 +20,7 @@
 | 04 | [LUMEN REEL ― まわる灯台と三つの海路](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game4/index.html) | リール構築パズル | キーボード＋マウス | Claude Fable 5.2 |
 | 05 | [REEL DELVE ― まわる迷宮と三人の旅](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game5/index.html) | 目押しダンジョン探索 | キーボード＋マウス | Claude Fable 5.2 |
 | 06 | [うしろのハニワ](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game6/index.html) | 視線の一人称ダンジョン | キーボード | Claude Fable 5.2 |
+| 07 | [切りもどし](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game7/index.html) | 剪定パズル | マウス＋キーボード | Claude Fable 5.2 |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
@@ -27,9 +28,10 @@
 - **LUMEN REEL**：灯台のリールを回して海路に光を送り、迷った舟を港へ帰します。夜明けの工房でリールを組み替えながら、五つの夜を越えます。
 - **REEL DELVE**：止めたリールの3段が、そのまま三人の冒険者の通り道になります。回して下見し、目押しで狙った並びに止めて、地下12階の底をめざします。
 - **うしろのハニワ**：見ているあいだは動かず、背を向けると寄ってくるハニワ。古墳の石室を一人称視点で歩き、視線だけで台座まで連れていきます。
+- **切りもどし**：枝を切ると切り口から二つの芽が吹き、春を呼ぶと伸びる盆栽の剪定パズル。鋏ひとつで木の形を決めて、ひだまりに花を咲かせます。
 
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
-操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md)）にあります。
+操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md)）にあります。
 
 > [!WARNING]
 > 各フォルダには、攻略・ネタバレを含む資料（`NOTES_ネタバレ注意.md`、`NETABARE*.md`、`VERIFICATION_検証記録.md`）や検証用の `tools/` も入っています。初めて遊ぶ前には開かないことをおすすめします。
@@ -53,7 +55,7 @@ assets/
   js/games.js               作品リスト（ここを編集すると作品が増える）
   js/main.js                カードの組み立てと背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/  game4/  game5/  game6/   各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/  game5/  game6/  game7/   各作品（それぞれ index.html から起動）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
