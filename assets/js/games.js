@@ -158,5 +158,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-16',
     accent: '#ff7b8f'
+  },
+  {
+    title: 'ひゅるり、凧びより',
+    subtitle: 'ちびつむじと お正月の村',
+    genre: 'まきこみ成長アクション',
+    description: 'ちいさな つむじ風になって、じぶんより ちいさなものを まきこみ、おおきくなる。まわるものを「ドン」と ぶつければ、やたいも 門も こわせる。にわから 村、かわら、おかへと ひろがる お正月の村で、子どもたちの 凧を 空へ あげる。',
+    path: 'game11/index.html',
+    thumbnail: 'assets/thumbs/hyururi-takobiyori.webp',
+    thumbnailSmall: 'assets/thumbs/hyururi-takobiyori-640.webp',
+    thumbnailAlt: '「ひゅるり、凧びより」のプレイ画面。のぼりや 屋台が ならぶ お正月の 村の通りを、ちいさな つむじ風が かどまつや 自転車を まきこみながら すすむ。そばには みかんを つんだ 軽トラと たぬきの 置物。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-16',
+    accent: '#7fc4e8'
   }
 ];
