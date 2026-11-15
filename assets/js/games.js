@@ -130,5 +130,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-15',
     accent: '#a8d283'
+  },
+  {
+    title: 'そこから、そら',
+    subtitle: '井戸のカエルと 五つの層',
+    genre: '縦穴ブロックくずし',
+    description: '井戸の底のカエルになって、玉をはね返し、頭の上の岩をくずして空をめざす。ささえを失った岩は かたまりごと がらがらっと落ちる。五つの層に、むかしの だれかの おとしものが眠っている。',
+    path: 'game9/index.html',
+    thumbnail: 'assets/thumbs/sokokara-sora.webp',
+    thumbnailSmall: 'assets/thumbs/sokokara-sora-640.webp',
+    thumbnailAlt: '「そこから、そら」のプレイ画面。井戸の中で、石の橋が はぜ石の爆発で まるごと崩れ落ち、「がらがらっ ×30」と表示される。下では カエルが 玉を はね返している。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-15',
+    accent: '#8cc8f0'
   }
 ];
