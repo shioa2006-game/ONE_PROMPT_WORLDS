@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ぐるり、夜まつり ― ゆいと 妖の 参道</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07040c; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #07040c; box-shadow: 0 10px 50px rgba(0,0,0,.6); touch-action: none; user-select: none; -webkit-user-select: none; }
+  noscript { color: #fff; font-family: sans-serif; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720" aria-label="ぐるり、夜まつり ゲーム画面"></canvas>
+<noscript>このゲームを遊ぶには JavaScript を有効にしてください。</noscript>
+<script src="js/data.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/scenes.js"></script>
+<script>G10.boot();</script>
+</body>
+</html>

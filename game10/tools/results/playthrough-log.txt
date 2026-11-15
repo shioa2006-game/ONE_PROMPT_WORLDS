@@ -1,0 +1,92 @@
+画面 title {}
+画面 story {}
+画面 map {"a": 0, "n": 0, "hp": 12, "coins": 0}
+画面 battle {"bid": "a1b1", "hp": 12, "coins": 0}
+かった a1b1 手数 12 輪 4 体力 12→10 {"coins": 48, "friends": {}, "newSp": []}
+画面 map {"a": 0, "n": 1, "hp": 10, "coins": 48}
+画面 battle {"bid": "a1b2", "hp": 10, "coins": 48}
+かった a1b2 手数 5 輪 2 体力 10→12 {"coins": 12, "friends": {"mame": 1, "kooni": 1}, "newSp": ["mame", "kooni"]}
+画面 map {"a": 0, "n": 2, "hp": 12, "coins": 60}
+わかれ道 → a1e (体力 12/12)
+画面 battle {"bid": "a1e", "hp": 12, "coins": 60}
+かった a1e 手数 9 輪 3 体力 12→10 {"coins": 27, "friends": {"zashiki": 1}, "newSp": ["zashiki"]}
+画面 map {"a": 0, "n": 3, "hp": 10, "coins": 87}
+画面 shop {}
+かった 組みひも
+かった りんご飴
+かった 金魚すくい
+画面 map {"a": 0, "n": 4, "hp": 13, "coins": 7}
+画面 battle {"bid": "a1boss", "hp": 13, "coins": 7}
+かった a1boss 手数 6 輪 1 体力 13→11 {"coins": 7, "friends": {"mame": 1, "danuki": 1}, "newSp": ["danuki"]}
+画面 map {"a": 1, "n": 0, "hp": 11, "coins": 14}
+ページを 読みこみなおす（その二の はじめ）
+つづきから ボタン True → {"scene": "title", "menu": false, "fade": 0}
+画面 battle {"bid": "a2b1", "hp": 11, "coins": 14}
+かった a2b1 手数 5 輪 2 体力 11→16 {"coins": 18, "friends": {"kooni": 1}, "newSp": []}
+画面 map {"a": 1, "n": 1, "hp": 16, "coins": 32}
+画面 battle {"bid": "a2b2", "hp": 16, "coins": 32}
+かった a2b2 手数 4 輪 0 体力 16→16 {"coins": 5, "friends": {}, "newSp": []}
+画面 map {"a": 1, "n": 2, "hp": 16, "coins": 37}
+わかれ道 → a2e (体力 16/18)
+画面 battle {"bid": "a2e", "hp": 16, "coins": 37}
+かった a2e 手数 8 輪 2 体力 16→17 {"coins": 18, "friends": {"kamaitachi": 1}, "newSp": ["kamaitachi"]}
+画面 map {"a": 1, "n": 3, "hp": 17, "coins": 55}
+画面 shop {}
+かった 大玉花火
+画面 map {"a": 1, "n": 4, "hp": 17, "coins": 11}
+画面 battle {"bid": "a2boss", "hp": 17, "coins": 11}
+かった a2boss 手数 11 輪 4 体力 17→15 {"coins": 28, "friends": {"tengu": 1}, "newSp": ["tengu"]}
+画面 map {"a": 2, "n": 0, "hp": 15, "coins": 39}
+画面 battle {"bid": "a3b1", "hp": 15, "coins": 39}
+かった a3b1 手数 12 輪 3 体力 15→16 {"coins": 47, "friends": {"kasa": 1}, "newSp": ["kasa"]}
+画面 map {"a": 2, "n": 1, "hp": 16, "coins": 83}
+画面 battle {"bid": "a3b2", "hp": 16, "coins": 83}
+かった a3b2 手数 5 輪 2 体力 16→16 {"coins": 24, "friends": {"azuki": 1, "kappa": 1}, "newSp": ["azuki", "kappa"]}
+画面 map {"a": 2, "n": 2, "hp": 16, "coins": 104}
+わかれ道 → a3e (体力 16/20)
+画面 battle {"bid": "a3e", "hp": 16, "coins": 104}
+かった a3e 手数 3 輪 1 体力 16→16 {"coins": 23, "friends": {"ryu": 1, "kappa": 1}, "newSp": ["ryu"]}
+画面 map {"a": 2, "n": 3, "hp": 16, "coins": 127}
+画面 shop {}
+かった 組みひも
+かった りんご飴
+かった 金魚すくい
+画面 map {"a": 2, "n": 4, "hp": 19, "coins": 47}
+画面 battle {"bid": "a3boss", "hp": 19, "coins": 47}
+かった a3boss 手数 12 輪 1 体力 19→21 {"coins": 28, "friends": {"kappa": 1, "gama": 1}, "newSp": ["gama"]}
+画面 map {"a": 3, "n": 0, "hp": 21, "coins": 72}
+画面 battle {"bid": "a4b1", "hp": 21, "coins": 72}
+かった a4b1 手数 8 輪 2 体力 21→26 {"coins": 56, "friends": {"kooni": 1}, "newSp": []}
+画面 map {"a": 3, "n": 1, "hp": 26, "coins": 128}
+わかれ道 → a4e (体力 26/27)
+画面 battle {"bid": "a4e", "hp": 26, "coins": 128}
+かった a4e 手数 7 輪 3 体力 26→27 {"coins": 51, "friends": {"chochin": 2}, "newSp": ["chochin"]}
+画面 map {"a": 3, "n": 2, "hp": 27, "coins": 176}
+画面 shop {}
+かった 組みひも
+かった きつねのお面
+かった わたあめ
+画面 map {"a": 3, "n": 3, "hp": 27, "coins": 80}
+画面 battle {"bid": "a4boss", "hp": 27, "coins": 80}
+かった a4boss 手数 18 輪 4 体力 27→26 {"coins": 49, "friends": {"kasa": 1, "azuki": 1, "oni": 1}, "newSp": ["oni"]}
+画面 ending {}
+むすび {"friends":13,"time":537.02580000007,"stats":{"rings":34,"best":19,"bigRing":19,"friendsMade":21}}
+表紙の ボタン ["もういちど あそぶ", "ともだち帳(13 / 16)", "遊びかた"]
+---- 戦いの まとめ
+a1b1     手数 12 輪 4 むすぶ 0 挑戦1 体力 12→10 小判 0→48
+a1b2     手数  5 輪 2 むすぶ 2 挑戦1 体力 10→12 小判 48→60
+a1e      手数  9 輪 3 むすぶ 1 挑戦1 体力 12→10 小判 60→87
+a1boss   手数  6 輪 1 むすぶ 1 挑戦1 体力 13→11 小判 7→14
+a2b1     手数  5 輪 2 むすぶ 1 挑戦1 体力 11→16 小判 14→32
+a2b2     手数  4 輪 0 むすぶ 0 挑戦1 体力 16→16 小判 32→37
+a2e      手数  8 輪 2 むすぶ 1 挑戦1 体力 16→17 小判 37→55
+a2boss   手数 11 輪 4 むすぶ 0 挑戦1 体力 17→15 小判 11→39
+a3b1     手数 12 輪 3 むすぶ 1 挑戦1 体力 15→16 小判 39→83
+a3b2     手数  5 輪 2 むすぶ 2 挑戦1 体力 16→16 小判 83→104
+a3e      手数  3 輪 1 むすぶ 2 挑戦1 体力 16→16 小判 104→127
+a3boss   手数 12 輪 1 むすぶ 0 挑戦1 体力 19→21 小判 47→72
+a4b1     手数  8 輪 2 むすぶ 1 挑戦1 体力 21→26 小判 72→128
+a4e      手数  7 輪 3 むすぶ 2 挑戦1 体力 26→27 小判 128→176
+a4boss   手数 18 輪 4 むすぶ 1 挑戦1 体力 27→26 小判 80→129
+ページエラー・コンソールの エラー/警告: 0
+かかった 実時間 306秒（早回し 2.0ばい）
