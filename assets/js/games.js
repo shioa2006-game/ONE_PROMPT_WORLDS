@@ -75,5 +75,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-15',
     accent: '#ffd166'
+  },
+  {
+    title: 'REEL DELVE',
+    subtitle: 'まわる迷宮と三人の旅',
+    genre: '目押しダンジョン探索',
+    description: '止めたリールの3段が、そのまま三人の冒険者の通り道になる。回して下見し、目押しで狙った並びに止めて、地下12階の底をめざす。',
+    path: 'game5/index.html',
+    thumbnail: 'assets/thumbs/reel-delve.webp',
+    thumbnailSmall: 'assets/thumbs/reel-delve-640.webp',
+    thumbnailAlt: '「REEL DELVE」のプレイ画面。五本のリールの窓に並んだ3段を、剣士・盗賊・魔導士が歩いて金貨を拾う。',
+    controls: 'キーボード＋マウス',
+    ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-15',
+    accent: '#e2b657'
   }
 ];
