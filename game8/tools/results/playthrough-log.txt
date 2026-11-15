@@ -1,0 +1,23 @@
+title scene: title sheep on title: 8
+title: dog follows mouse: True
+title: dash gait while held: True
+after start click: play はじめの五ひき
+L1 real-mouse clear: True time 8.9 stars [3]
+R restarts level: True
+Esc -> select: select
+select node 2 click -> play せまい門
+Esc from select -> title: title
+replay L1: done=True game_time=8.6 bot_time=8.6 stars=3
+replay L2: done=True game_time=20.7 bot_time=20.7 stars=3
+replay L3: done=True game_time=21.9 bot_time=21.9 stars=3
+replay L4: done=True game_time=79.9 bot_time=79.9 stars=3
+replay L5: done=True game_time=43.9 bot_time=43.9 stars=3
+replay L6: done=True game_time=28.3 bot_time=28.3 stars=3
+replay L7: done=True game_time=31.2 bot_time=31.2 stars=3
+replay L8: done=True game_time=177.6 bot_time=177.6 stars=1
+replay L9: done=True game_time=74.3 bot_time=74.3 stars=3
+last level panel up: clearT>1.3: True all stars: [3, 3, 3, 3, 3, 3, 3, 1, 3]
+-> ending: ending
+ending button -> select: select
+after reload: stars kept: [3, 3, 3, 3, 3, 3, 3, 1, 3]
+page errors: []
