@@ -89,5 +89,18 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-15',
     accent: '#e2b657'
+  },
+  {
+    title: 'うしろのハニワ',
+    genre: '視線の一人称ダンジョン',
+    description: '見ているあいだは動かず、背を向けると「ゴト」と寄ってくる。古墳の石室を一人称視点で歩き、目をさましたハニワを視線だけで台座まで連れていく。',
+    path: 'game6/index.html',
+    thumbnail: 'assets/thumbs/ushiro-haniwa.webp',
+    thumbnailSmall: 'assets/thumbs/ushiro-haniwa-640.webp',
+    thumbnailAlt: '「うしろのハニワ」のプレイ画面。朱の文様が描かれた石の通路の先に、片腕を上げた赤いハニワが立っている。',
+    controls: 'キーボード',
+    ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-15',
+    accent: '#e0764a'
   }
 ];
