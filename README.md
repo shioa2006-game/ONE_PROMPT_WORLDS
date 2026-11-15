@@ -17,13 +17,15 @@
 | 01 | [ぽん、と森は灯る](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game/index.html) | 物理ショット・探索 | マウス | Claude Fable 5.2 |
 | 02 | [ひとつぶ庭園](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game2/index.html) | 粒の箱庭パズル | マウス | Claude Fable 5.2 |
 | 03 | [EMBERDEEP ― 燈守りの坑道](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game3/index.html) | トップダウン・アクションRPG | キーボード＋マウス | Claude Fable 5.2 |
+| 04 | [LUMEN REEL ― まわる灯台と三つの海路](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game4/index.html) | リール構築パズル | キーボード＋マウス | Claude |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
 - **EMBERDEEP**：ランタンひとつで闇の坑道へ潜ります。火鉢を灯してカゲと戦い、区画ごと闇を払いながら最深部をめざします。
+- **LUMEN REEL**：灯台のリールを回して海路に光を送り、迷った舟を港へ帰します。夜明けの工房でリールを組み替えながら、五つの夜を越えます。
 
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
-操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md)）にあります。
+操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md)）にあります。
 
 > [!WARNING]
 > 各フォルダには、攻略・ネタバレを含む資料（`NOTES_ネタバレ注意.md`、`NETABARE*.md`、`VERIFICATION_検証記録.md`）や検証用の `tools/` も入っています。初めて遊ぶ前には開かないことをおすすめします。
@@ -47,7 +49,7 @@ assets/
   js/games.js               作品リスト（ここを編集すると作品が増える）
   js/main.js                カードの組み立てと背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/       各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/   各作品（それぞれ index.html から起動）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```

@@ -61,5 +61,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-14',
     accent: '#ffb85c'
+  },
+  {
+    title: 'LUMEN REEL',
+    subtitle: 'まわる灯台と三つの海路',
+    genre: 'リール構築パズル',
+    description: '灯台のリールを回し、部品を並べて三つの海路に光を送る。迷った舟を港へ帰し、夜明けの工房でリールを組み替えながら五つの夜を越える。',
+    path: 'game4/index.html',
+    thumbnail: 'assets/thumbs/lumen-reel.webp',
+    thumbnailSmall: 'assets/thumbs/lumen-reel-640.webp',
+    thumbnailAlt: '「LUMEN REEL」のタイトル画面。灯台のリールから月夜の海へ光が伸びている。',
+    controls: 'キーボード＋マウス',
+    ai: 'Claude',
+    createdDate: '2026-11-15',
+    accent: '#ffd166'
   }
 ];
