@@ -25,6 +25,7 @@
 | 09 | [そこから、そら ― 井戸のカエルと 五つの層](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game9/index.html) | 縦穴ブロックくずし | マウス | Claude Opus 5.5 |
 | 10 | [ぐるり、夜まつり ― ゆいと 妖の 参道](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game10/index.html) | なぞりパズル・バトル | マウス | Claude Opus 5.5 |
 | 11 | [ひゅるり、凧びより ― ちびつむじと お正月の村](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game11/index.html) | まきこみ成長アクション | マウス | Claude Opus 5.5 |
+| 12 | [ころころ、ひらけ列島 ― 三つの鉄道と にっぽん開通すごろく](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game12/index.html) | 鉄道すごろく | マウス | Claude Opus 5.5 |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
@@ -37,9 +38,10 @@
 - **そこから、そら**：井戸の底のカエルになって、玉をはね返し、頭の上の岩をくずしながら空をめざします。ささえを失った岩は、かたまりごと がらがらっと落ちる。上の層へのぼるほど、むかしの だれかの おとしものが見つかります。
 - **ぐるり、夜まつり**：同じ玉をなぞってつなぎ、なぞりはじめに もどれば「輪」。紅白のひもで妖（あやかし）を ぐるっと囲むと、ともだちになって行列についてきます。夏まつりの夜、妖でいっぱいの参道をぬけて、社の夜まつりをめざします。
 - **ひゅるり、凧びより**：ちいさな つむじ風になって、じぶんより ちいさなものを まきこみ、おおきくなります。まわるものを「ドン」と ぶつければ、やたいや門も こわせる。にわから 村、かわら、おかへと ひろがる お正月の村で、子どもたちの凧を空へあげます。
+- **ころころ、ひらけ列島**：サイコロで日本の線路を走り、目的地に一番乗りすると、雲の向こうの地方をひとつひらけます。ひらいた地方への関所は自分のもの。駅で名物を集め、季節の決算でふやしながら、きつねとたぬきの鉄道会社と1年を競います。
 
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
-操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md)）にあります。
+操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md)）にあります。
 
 > [!WARNING]
 > 各フォルダには、攻略・ネタバレを含む資料（`NOTES_ネタバレ注意.md`、`NETABARE*.md`、`VERIFICATION_検証記録.md`）や検証用の `tools/` も入っています。初めて遊ぶ前には開かないことをおすすめします。
@@ -63,9 +65,9 @@ assets/
   js/games.js               作品リスト（ここを編集すると作品が増える）
   js/main.js                カードの組み立てと背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/   各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/   各作品（それぞれ index.html から起動）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書（01〜08、Claude Fable 5.2）
-Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜11、Claude Opus 5.5）
+Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12、Claude Opus 5.5）
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
 

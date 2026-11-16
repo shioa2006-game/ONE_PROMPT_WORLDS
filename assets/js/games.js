@@ -172,5 +172,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-16',
     accent: '#7fc4e8'
+  },
+  {
+    title: 'ころころ、ひらけ列島',
+    subtitle: '三つの鉄道と にっぽん開通すごろく',
+    genre: '鉄道すごろく',
+    description: 'サイコロで 日本の 線路を 走り、目的地に 一番乗りすると、雲の 向こうの 地方を ひとつ ひらける。ひらいた 地方への 関所は 自分のもの。駅で 名物を 集め、季節の 決算で ふやしながら、きつねと たぬきの 鉄道会社と 1年を 競う。',
+    path: 'game12/index.html',
+    thumbnail: 'assets/thumbs/korokoro-hirake.webp',
+    thumbnailSmall: 'assets/thumbs/korokoro-hirake-640.webp',
+    thumbnailAlt: '「ころころ、ひらけ列島」のプレイ画面。紅葉した 中国地方と 九州の 鉄道地図を、柴犬・きつね・たぬきの 三つの 列車が 走る。となりの 四国は「未開通」の 雲に おおわれ、うどん・渦潮・いで湯 の 名物だけが 見えている。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-16',
+    accent: '#ff9a6b'
   }
 ];
