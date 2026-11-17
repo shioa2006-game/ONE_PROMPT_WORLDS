@@ -186,5 +186,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-16',
     accent: '#ff9a6b'
+  },
+  {
+    title: 'からり、国盗り',
+    subtitle: '賽の目 戦国絵巻',
+    genre: 'サイコロ国盗り戦略',
+    description: '1560年秋、桶狭間のあと。二十の大名から ひとりを選び、サイコロを振って 国を治め、隣国へ攻めこむ。表の目で攻め、裏の目で治める ―― 大きい目は いくさに、小さい目は 内政に強い。出た目を どの国の 何に使うか。20季のうちに 天下人をめざす。',
+    path: 'game13/index.html',
+    thumbnail: 'assets/thumbs/karari-kunitori.webp',
+    thumbnailSmall: 'assets/thumbs/karari-kunitori-640.webp',
+    thumbnailAlt: '「からり、国盗り」のプレイ画面。左に 勢力ごとに 色分けされた 中部・近畿20国の地図、右に 織田信長の 采配パネル。尾張・美濃・三河・遠江駿河が 金色に ふちどられ、下には 振ったサイコロが ならぶ。',
+    controls: 'マウス',
+    ai: 'Claude Fable 5.2',
+    createdDate: '2026-11-17',
+    accent: '#e0a23a'
   }
 ];
