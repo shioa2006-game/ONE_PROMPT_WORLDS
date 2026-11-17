@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>天下賽配 ― 戦国サイコロ国盗り</title>
+<meta name="description" content="1560年秋、桶狭間の後。サイコロの出目で内政・調略・合戦を采配し、天下を目指す戦国国盗りゲーム。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='10' fill='%23f4ead3' stroke='%238a6a1e' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%23c8261e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <!-- ======================= MAP (shared by select & game) ======================= -->
+    <div id="mapwrap">
+      <div class="sea" id="sea"></div>
+      <svg id="map" aria-label="戦国地図"></svg>
+      <canvas id="fxcanvas" width="1060" height="900"></canvas>
+      <div class="vignette"></div>
+      <div id="clouds" aria-hidden="true"></div>
+      <div id="season-badge" class="hidden">
+        <div class="sb-era"></div>
+        <div class="sb-season"></div>
+        <div class="sb-turn"></div>
+        <div class="sb-track"></div>
+      </div>
+      <div id="tooltip" class="hidden"></div>
+      <div id="battle-pop" class="hidden"></div>
+      <div id="center-msg" class="hidden"></div>
+      <div id="cpu-skip" class="hidden">クリックで早送り ▶▶</div>
+    </div>
+
+    <!-- ======================= SIDE PANEL (game) ======================= -->
+    <aside id="side" class="hidden">
+      <div id="clan-head">
+        <div class="ch-banner"><span class="ch-mon"></span></div>
+        <div class="ch-names"><div class="ch-clan"></div><div class="ch-lord"></div></div>
+        <div class="ch-icons">
+          <button class="icon-btn" id="btn-sound" title="音量">♪</button>
+          <button class="icon-btn" id="btn-menu" title="メニュー">≡</button>
+        </div>
+        <div class="ch-stats">
+          <div class="st"><span class="k">領国</span><span class="v" id="st-prov">1</span></div>
+          <div class="st" title="総兵／兵の上限（国ごとに8＋軍事力）"><span class="k">総兵</span><span class="v" id="st-troops">0</span><span class="sub2" id="st-cap"></span></div>
+          <div class="st"><span class="k">金</span><span class="v" id="st-gold">0</span><span class="sub" id="st-income"></span></div>
+          <div class="st sonae" title="備え：使わずに残した一番大きい目。次の自分の番まで、力攻めされたときの守りのサイコロがこの目より小さくならない（使うたびに1減る）"><span class="k">備え</span><span class="v" id="st-sonae">—</span></div>
+          <div class="st"><span class="k">順位</span><span class="v" id="st-rank">-</span></div>
+        </div>
+        <div id="powerbar" title="勢力図（領国数）"></div>
+      </div>
+
+      <div id="tray-wrap">
+        <div id="tray">
+          <div id="dice-row"></div>
+          <button id="btn-roll" class="big-btn">賽を振る<small>Space</small></button>
+        </div>
+        <div id="dice-info"><span id="dice-count"></span><span id="dice-next"></span></div>
+      </div>
+
+      <div id="cmd"></div>
+
+      <div id="side-foot">
+        <div id="minilog"></div>
+        <button id="btn-end" class="big-btn end">季節を終える<small>Enter</small></button>
+      </div>
+    </aside>
+
+    <!-- ======================= SCREENS ======================= -->
+    <section id="scr-title" class="screen">
+      <div class="title-wrap">
+        <div class="title-sub-top">永禄三年 秋 ― 桶狭間の後</div>
+        <h1 class="title-main"><span>天</span><span>下</span><span>賽</span><span>配</span></h1>
+        <div class="title-sub">戦国サイコロ国盗り</div>
+        <div class="title-dice" id="title-dice"></div>
+        <div class="title-btns">
+          <button class="t-btn" id="btn-new">はじめから</button>
+          <button class="t-btn" id="btn-continue">つづきから</button>
+          <button class="t-btn ghost" id="btn-howto">遊び方</button>
+        </div>
+        <div class="title-foot">サイコロの出目で采配し、二十季のうちに最大の勢力を築け</div>
+      </div>
+    </section>
+
+    <section id="scr-select" class="screen hidden">
+      <div class="sel-panel">
+        <div class="sel-head">大名を選べ<small>地図の国、または下の旗をクリック</small></div>
+        <div id="sel-card"></div>
+        <div id="sel-grid"></div>
+        <div class="sel-btns">
+          <button class="t-btn ghost small" id="btn-sel-back">戻る</button>
+          <button class="t-btn" id="btn-sel-go">この大名で出陣</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-howto" class="screen hidden">
+      <div class="howto">
+        <h2>遊び方</h2>
+        <div id="howto-body"></div>
+        <button class="t-btn" id="btn-howto-close">閉じる</button>
+      </div>
+    </section>
+
+    <section id="scr-result" class="screen hidden">
+      <div class="result">
+        <div class="res-title" id="res-title"></div>
+        <div class="res-sub" id="res-sub"></div>
+        <div class="res-body">
+          <div id="res-rank"></div>
+          <div id="res-chart"></div>
+        </div>
+        <div class="res-btns">
+          <button class="t-btn" id="btn-retry">同じ大名で再挑戦</button>
+          <button class="t-btn" id="btn-reselect">大名を選び直す</button>
+          <button class="t-btn ghost small" id="btn-totitle">タイトルへ</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-menu" class="screen hidden">
+      <div class="menu-box">
+        <h3>メニュー</h3>
+        <div class="vol-row"><label>音量（全体）</label><input type="range" id="vol-master" min="0" max="100"></div>
+        <div class="vol-row"><label>効果音</label><input type="range" id="vol-sfx" min="0" max="100"></div>
+        <div class="vol-row"><label>音楽</label><input type="range" id="vol-bgm" min="0" max="100"></div>
+        <div class="vol-row"><label>消音</label><input type="checkbox" id="vol-mute"></div>
+        <div class="vol-row"><label>演出の速さ</label><select id="opt-speed"><option value="1">ふつう</option><option value="1.6">はやい</option><option value="2.5">とてもはやい</option></select></div>
+        <div class="menu-btns">
+          <button class="t-btn small" id="btn-menu-howto">遊び方</button>
+          <button class="t-btn small" id="btn-menu-rank">勢力一覧</button>
+          <button class="t-btn small ghost" id="btn-menu-title">タイトルへ（自動保存済）</button>
+          <button class="t-btn small" id="btn-menu-close">閉じる</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-rank" class="screen hidden">
+      <div class="rank-box">
+        <h3>勢力一覧</h3>
+        <div id="rank-table"></div>
+        <button class="t-btn small" id="btn-rank-close">閉じる</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="js/mapdata.js"></script>
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/dice.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

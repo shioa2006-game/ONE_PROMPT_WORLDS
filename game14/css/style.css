@@ -1,0 +1,111 @@
+/* 天下賽 — style.css */
+:root {
+  --ink: #1b140c;
+  --paper: #f3e7cc;
+  --paper2: #e6d6b2;
+  --gold: #d4a93c;
+  --gold2: #f3d77a;
+  --gold3: #8a6a1e;
+  --lacquer: #1a1210;
+  --lacquer2: #2a1b16;
+  --vermilion: #c8321f;
+  --sea1: #10243d;
+  --sea2: #1b3a5c;
+  --good: #7fd17a;
+  --bad: #ff6a4a;
+  --font-jp: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif JP", "MS PMincho", serif;
+  --font-ui: "Yu Gothic UI", "Yu Gothic", "YuGothic", "Hiragino Sans", "Meiryo", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0a0806; overflow: hidden; }
+body { font-family: var(--font-jp); color: var(--paper); user-select: none; -webkit-user-select: none; }
+button { font-family: inherit; }
+
+/* ---------- fixed 16:9 stage scaled to the window ---------- */
+#viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #1a120c 0%, #050403 100%); }
+#stage { position: relative; width: 1600px; height: 900px; transform-origin: center center; overflow: hidden; background: #0d1a2b; }
+
+/* ---------- map ---------- */
+#mapwrap { position: absolute; left: 0; top: 0; width: 1060px; height: 900px; overflow: hidden; background-color: var(--sea1); }
+#mapwrap .sea { position: absolute; inset: 0; background-size: 48px 24px; opacity: 1; }
+#map { position: absolute; left: 0; top: 0; width: 1060px; height: 900px; }
+#fxcanvas { position: absolute; inset: 0; width: 1060px; height: 900px; pointer-events: none; }
+#mapwrap .vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(0,0,0,.55); }
+
+.prov { cursor: pointer; stroke: none; transition: fill .35s ease, opacity .25s ease, filter .2s; }
+.prov.hover { filter: brightness(1.14) saturate(1.1); }
+.prov.dim { opacity: .38; }
+.prov.mine { filter: saturate(1.15); }
+.m-neutral-label { font-size: 13px; fill: rgba(70,52,30,.55); text-anchor: middle; letter-spacing: .25em; font-weight: 700; pointer-events: none; }
+.road { stroke: rgba(46,30,14,.42); stroke-width: 1.3; stroke-dasharray: 3 4; stroke-linecap: round; transition: stroke .2s, stroke-width .2s; }
+.road.active { stroke: #ffcf5a; stroke-width: 3.2; stroke-dasharray: 9 6; animation: roadflow .6s linear infinite; filter: url(#glow); }
+.road.active-own { stroke: #8fe3ff; stroke-width: 2.8; stroke-dasharray: 9 6; animation: roadflow .6s linear infinite; }
+@keyframes roadflow { to { stroke-dashoffset: -15; } }
+
+.hi-sel { fill: rgba(255,230,140,.10); stroke: #ffe08a; stroke-width: 4; filter: url(#glow); }
+.hi-enemy { fill: rgba(255,70,40,.16); stroke: #ff6a3a; stroke-width: 3; stroke-dasharray: 10 5; animation: roadflow .9s linear infinite; }
+.hi-own { fill: rgba(110,210,255,.14); stroke: #8fe3ff; stroke-width: 2.6; stroke-dasharray: 8 5; animation: roadflow .9s linear infinite; }
+.hi-bad { fill: rgba(40,40,40,.18); stroke: #9a9a9a; stroke-width: 2; stroke-dasharray: 4 5; }
+
+.plabel { cursor: pointer; transition: opacity .25s; }
+.plabel.dim { opacity: .55; }
+.plabel .tok-bg { fill: #1d140c; stroke: #b8923a; stroke-width: 2; }
+.plabel .tok-ring { fill: none; stroke: rgba(212,169,60,.45); stroke-width: 1; }
+.plabel .tok-num { fill: #fff6dc; font-size: 15px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: var(--font-ui); }
+.plabel .pname { font-size: 14px; font-weight: 800; fill: #1a1209; stroke: rgba(250,240,215,.92); stroke-width: 3.4px; paint-order: stroke; text-anchor: middle; letter-spacing: .04em; }
+.plabel .mon { font-size: 12px; font-weight: 900; text-anchor: middle; dominant-baseline: central; }
+.plabel .flag { filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+.plabel.mine .tok-bg { fill: #3a2408; stroke: #ffe08a; stroke-width: 3; }
+.plabel.mine .pname { fill: #5a2a00; stroke: #fff3c4; }
+.plabel.sel .tok-bg { stroke: #fff; }
+.plabel.target .tok-bg { stroke: #ff7a4a; stroke-width: 3; }
+
+/* effects */
+.stamp .stamp-in { animation: stampin .32s cubic-bezier(.2,1.6,.4,1) both; transform-box: fill-box; transform-origin: center; }
+.stamp.big .stamp-in { animation-duration: .4s; }
+.stamp .stamp-bg { fill: var(--vermilion); opacity: .93; }
+.stamp .stamp-line { fill: none; stroke: #fff1dc; stroke-width: 1.6; }
+.stamp .stamp-ch { fill: #fff1dc; font-size: 24px; font-weight: 900; text-anchor: middle; dominant-baseline: central; }
+.stamp.out { transition: opacity .7s; opacity: 0; }
+@keyframes stampin { 0% { transform: scale(2.6) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-6deg); opacity: 1; } }
+.float { font-size: 17px; font-weight: 900; text-anchor: middle; fill: #ffe9a8; stroke: #24160a; stroke-width: 3.6px; paint-order: stroke; animation: floatup 1.4s ease-out forwards; font-family: var(--font-ui); }
+.float.bad { fill: #ff8a6a; }
+.float.good { fill: #b6f59a; }
+.float.blue { fill: #a8e6ff; }
+@keyframes floatup { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px); } }
+.pulse { fill: rgba(255,240,190,.55); animation: pulse .9s ease-out forwards; }
+.pulse.red { fill: rgba(255,80,40,.5); }
+@keyframes pulse { from { opacity: 1; } to { opacity: 0; } }
+.battle .battle-bg { fill: #2a0d08; stroke: #ff6a3a; stroke-width: 2.4; }
+.battle .battle-ch { fill: #ffd8a8; font-size: 18px; text-anchor: middle; dominant-baseline: central; }
+.battle { animation: battlein .25s ease-out; }
+.battle.out { transition: opacity .35s; opacity: 0; }
+@keyframes battlein { from { transform: scale(0); } }
+.march-arrow { fill: none; stroke: #ffcf5a; stroke-width: 4.5; stroke-linecap: round; filter: url(#glow); }
+.march-arrow.own { stroke: #8fe3ff; }
+.march-arrow.out { transition: opacity .35s; opacity: 0; }
+
+/* ---------- 3D dice ---------- */
+.die3d { width: var(--s); height: var(--s); perspective: 600px; position: relative; display: inline-block; }
+.die3d .cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; }
+.die3d .face { position: absolute; inset: 0; border-radius: 16%; background: radial-gradient(circle at 30% 25%, #fffdf6 0%, #f4ead3 55%, #d9c9a4 100%);
+  box-shadow: inset 0 0 calc(var(--s) * .08) rgba(120,90,40,.45), inset 0 0 0 1px rgba(150,120,70,.4); backface-visibility: hidden; }
+.die3d .pip { position: absolute; width: 19%; height: 19%; margin: -9.5% 0 0 -9.5%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a4036 0%, #120c06 70%); box-shadow: inset 0 1px 1px rgba(0,0,0,.6); }
+.die3d .pip.red { width: 34%; height: 34%; margin: -17% 0 0 -17%; background: radial-gradient(circle at 35% 30%, #ff6a4a 0%, #b5170c 60%, #6e0a04 100%); }
+.die3d.rolling { filter: drop-shadow(0 10px 8px rgba(0,0,0,.45)); }
+
+/* threat badges & raid marks */
+.plabel .threat { display: none; }
+.plabel .threat.on { display: block; animation: threatpulse 1.6s ease-in-out infinite; }
+.plabel .threat rect { fill: #a8160e; stroke: #ffd0a0; stroke-width: 1.2; }
+.plabel .threat text { fill: #fff3e0; font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; font-family: var(--font-ui); }
+@keyframes threatpulse { 50% { opacity: .55; } }
+.threat-arrow { fill: none; stroke: rgba(255,80,50,.75); stroke-width: 3; stroke-dasharray: 2 6; stroke-linecap: round; animation: roadflow .9s linear infinite reverse; }
+.hi-raid { fill: rgba(80,180,255,.18); stroke: #8fe3ff; stroke-width: 3; stroke-dasharray: 3 5; animation: roadflow .7s linear infinite; }
+.plabel .rmark { display: none; }
+.plabel .rmark.on { display: block; }
+.plabel .rmark circle { fill: #24668e; stroke: #cfefff; stroke-width: 1.5; }
+.plabel .rmark text { fill: #fff; font-size: 11px; font-weight: 900; text-anchor: middle; dominant-baseline: central; }
+.stamp.crush .stamp-bg { fill: #e0a020; }
+#stage { flex: none; }
