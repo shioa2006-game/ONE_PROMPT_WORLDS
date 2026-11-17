@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>からり、国盗り ― 賽の目 戦国絵巻</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #17110c; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #2a2018; box-shadow: 0 0 40px rgba(0, 0, 0, 0.6); }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #e8dcc0;
+    font: 600 20px "Yu Mincho", "Hiragino Mincho ProN", serif; letter-spacing: 0.2em; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="cv" width="1280" height="720"></canvas>
+<div id="loading">地図を描いています…</div>
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/map.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
