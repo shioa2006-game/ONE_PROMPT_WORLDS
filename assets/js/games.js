@@ -200,5 +200,19 @@ window.OPW_GAMES = [
     ai: 'Claude Fable 5.2',
     createdDate: '2026-11-17',
     accent: '#e0a23a'
+  },
+  {
+    title: '天下賽配',
+    subtitle: '戦国サイコロ国盗り',
+    genre: '采配ダイス国盗り戦略',
+    description: '永禄三年秋、中部・近畿の二十国。振った賽を 一つずつ 国に置いて、その場で 命令を下す。表の目は 攻めの力、裏の目（7−出目）は 政（まつりごと）の力 ―― 6は いくさに、1は 内政と調略に強い。奇襲、備え、包囲網。十九家の大名と 競いながら、二十季のうちに 最大の勢力を築く。',
+    path: 'game14/index.html',
+    thumbnail: 'assets/thumbs/tenka-saihai.webp',
+    thumbnailSmall: 'assets/thumbs/tenka-saihai-640.webp',
+    thumbnailAlt: '「天下賽配」のプレイ画面。左に 勢力ごとに 色分けされた 中部・近畿20国の地図、右に 上杉謙信の 采配パネル。越後が 金色に ふちどられ、上には 振った4つのサイコロと それぞれの 攻めと政の値が ならぶ。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-18',
+    accent: '#c9a24a'
   }
 ];
