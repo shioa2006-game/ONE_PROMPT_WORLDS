@@ -56,7 +56,13 @@
 
 ## BEYOND ONE PROMPT の作品
 
-まだありません。改修を始めた作品から、開発中のまま並べていきます。
+| # | タイトル | 原型 | 状態 | 主な操作 | 制作AI |
+| --- | --- | --- | --- | --- | --- |
+| 01 | [賽駆け 天下 ― 戦国すごろく全国版](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/beyond1/index.html) | 15 賽駆け | 開発中 v0.1 | マウス | Claude Opus 5.5 |
+
+- **賽駆け 天下**：永禄三年、奥羽から九州までの85か国に59の大名家がひしめきます。賽の目を軍勢に配り、進軍させるか、城で徴兵・開墾・築城を命じるかを選びます。10年ごとの区切りを延長しながら、天下統一をめざします。人間が設計方針（`beyond1/DESIGN.md`）を書き、Claude が原型を改修しています。
+
+遊び方は [beyond1/README.md](beyond1/README.md)、更新履歴は [beyond1/CHANGELOG.md](beyond1/CHANGELOG.md) にあります。
 
 > [!WARNING]
 > 各フォルダには、攻略・ネタバレを含む資料（`NOTES_ネタバレ注意.md`、`NETABARE*.md`、`VERIFICATION_検証記録.md`、`SPOILERS.md`、`VERIFICATION.md`、`NOTES_15.md`、`VERIFICATION_15.md`）や検証用の `tools/` も入っています。初めて遊ぶ前には開かないことをおすすめします。

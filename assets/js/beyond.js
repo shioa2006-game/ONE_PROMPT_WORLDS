@@ -49,4 +49,22 @@
  *   }
  */
 window.OPW_BEYOND = [
+  {
+    title: '賽駆け 天下',
+    subtitle: '戦国すごろく全国版',
+    genre: 'サイコロ行軍・全国国盗り',
+    description: '永禄三年、奥羽から九州までの 八十五か国に 五十九の大名家が ひしめく。賽の目を 軍勢に配り、進軍させるか、城で 徴兵・開墾・築城を 命じるか。十年ごとの区切りを 延長しながら、天下統一を めざす。',
+    path: 'beyond1/index.html',
+    basedOn: ['game15'],
+    status: 'dev',
+    version: '0.1',
+    updatedDate: '2026-11-19',
+    changelog: 'https://github.com/shioa2006-game/ONE_PROMPT_WORLDS/blob/main/beyond1/CHANGELOG.md',
+    thumbnail: 'assets/thumbs/beyond1.webp',
+    thumbnailSmall: 'assets/thumbs/beyond1-640.webp',
+    thumbnailAlt: '「賽駆け 天下」のプレイ画面。大名ごとに 色分けされた 四国から奥羽までの 日本地図で、北条家の軍勢が 進める マスが 水色に光り、武田軍との 合戦の 勝つ見込み 83% と、駿府城での 内政（徴兵・開墾・築城）の 小窓が 表示されている。右下には 振った4つの サイコロ。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    accent: '#e3b955'
+  }
 ];
