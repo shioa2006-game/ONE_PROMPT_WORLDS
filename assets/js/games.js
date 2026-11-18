@@ -214,5 +214,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-18',
     accent: '#c9a24a'
+  },
+  {
+    title: '賽駆け',
+    subtitle: '戦国・賽振り行軍記',
+    genre: 'サイコロ行軍・領土争奪',
+    description: '永禄三年、中国から関東までの四十九か国。賽を振り、出た目を 自分の軍勢に 一つずつ配って 日本地図の上を 進軍させる。敵の城の隣に 陣取り、味方で囲んで 加勢し、ぴったりの目で 奇襲する。八家の大名と 競いながら、京を含む十八か国の 天下布武をめざす。',
+    path: 'game15/index.html',
+    thumbnail: 'assets/thumbs/saigake.webp',
+    thumbnailSmall: 'assets/thumbs/saigake-640.webp',
+    thumbnailAlt: '「賽駆け」のプレイ画面。勢力ごとに 色分けされた 中国から関東までの 日本地図で、上杉家の軍勢が 進める マスが 水色に光り、北条の城への 城攻めの 勝つ見込み 83% が 表示されている。右下には 振った4つの サイコロ。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-18',
+    accent: '#d0503a'
   }
 ];
