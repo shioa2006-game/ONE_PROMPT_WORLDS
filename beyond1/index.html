@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>賽駆け 天下 — 戦国すごろく全国版</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="ui">
+  <div id="hud" class="panel hidden">
+    <div id="date"><span id="era"></span><span id="season"></span><span id="left" title="最初の区切り（永禄十二年の冬）まで。区切りで、石高の順位で決着するか5年延長するかを選ぶ"></span></div>
+    <div id="me">
+      <div id="me-mon" class="mon"></div>
+      <div>
+        <div id="me-name"></div>
+        <div id="me-who"></div>
+        <div id="me-trait"></div>
+      </div>
+    </div>
+    <div id="me-stats">
+      <div class="stat"><b id="st-kok">0</b><small>石高<span id="st-rank"></span></small></div>
+      <div class="stat" id="st-prov-box"><b id="st-prov">0</b><small id="st-kyo">国</small></div>
+      <div class="stat"><b id="st-army">0</b><span id="st-slot">/2</span><small>軍勢</small></div>
+      <div class="stat"><b id="st-dice">3</b><small>賽</small></div>
+    </div>
+    <div id="goalbar"><div id="goalfill"></div></div>
+    <div id="goaltxt"></div>
+  </div>
+
+  <div id="armies" class="panel hidden">
+    <h4 id="armies-h">軍勢</h4>
+    <div id="armies-list"></div>
+  </div>
+
+  <div id="power" class="panel hidden">
+    <h4><span>勢力図（石高）</span><span id="power-n"></span></h4>
+    <div id="powerbar"></div>
+    <div id="powerlist"></div>
+    <div id="coal"></div>
+  </div>
+  <div id="navi" class="panel hidden"></div>
+  <div id="menu-btns" class="hidden">
+    <button id="b-sound" title="効果音のオン・オフ">音</button>
+    <button id="b-bgm" title="BGMのオン・オフ">楽</button>
+    <button id="b-help" title="遊び方">？</button>
+    <button id="b-menu" title="メニュー（記録・決着）">≡</button>
+  </div>
+
+  <div id="cpuchip" class="hidden"><span id="cpu-mon" class="mon sm"></span><span id="cpu-name"></span><span id="cpu-dice"></span><button id="b-fast" title="CPUの手番を早送り（F）">早送り</button><button id="b-skip" title="CPUの手番を飛ばす（S）">飛ばす</button></div>
+
+  <div id="log" class="panel hidden"></div>
+
+  <div id="tray" class="panel hidden">
+    <div id="prompt"></div>
+    <div id="dice"></div>
+    <div id="tray-btns">
+      <button id="b-roll" class="big primary">賽を振る</button>
+      <button id="b-nospawn" class="hidden" title="今季は新しい軍勢を出さずに賽を振る">出陣しない</button>
+      <button id="b-combine" title="二つの賽の目を足して一つの軍勢を動かす（Shift＋クリックでも可）">強行軍</button>
+      <button id="b-undo" title="合戦をしていない命令を取り消す（Z）">一手戻す</button>
+      <button id="b-auto" title="残りの賽で、まだ命令していない軍勢をCPUの考えで動かす（A）">おまかせ</button>
+      <button id="b-end" class="big">手番を終える</button>
+    </div>
+  </div>
+
+  <div id="gov" class="hidden"></div>
+  <div id="news" class="hidden"></div>
+  <div id="hint" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <div id="forecast" class="hidden"></div>
+  <div id="tip" class="hidden"></div>
+  <div id="banner" class="hidden"></div>
+  <div id="battle" class="hidden"></div>
+
+  <div id="title" class="screen">
+    <div>
+      <div class="t1">賽<span>駆</span>け<i class="seal">天下</i></div>
+      <div class="t2">戦国すごろく　全国版</div>
+      <div class="t3">奥羽から九州まで、六十に近い大名家がひしめく永禄三年。<br>賽を振り、出目を軍勢に配る。攻めるか、国を富ませるか──日本地図を自分の色で染めあげよ。</div>
+      <div class="btns">
+        <button id="b-new" class="big primary">はじめから</button>
+        <button id="b-cont" class="big">つづきから</button>
+        <button id="b-load">記録から</button>
+        <button id="b-howto">遊び方</button>
+      </div>
+      <div class="foot">BEYOND ONE PROMPT 01　マウスで遊べます／音が鳴ります（遊ぶ画面の左上「音」「楽」で切り替え）</div>
+    </div>
+  </div>
+
+  <div id="select" class="screen hidden">
+    <div class="card">
+      <h2>大名を選ぶ　<small>永禄三年（1560）春　光る国が領地。はじめては難易度「易」の家がおすすめ</small></h2>
+      <div id="clans"></div>
+      <div class="selnote">選べるのは主要な15家。ほかの44家はCPUが動かす。</div>
+    </div>
+    <div class="card detail-card">
+      <div id="clan-detail"></div>
+      <div class="row-btns">
+        <button id="b-back">もどる</button>
+        <button id="b-go" class="big primary">出陣</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help" class="screen hidden">
+    <div class="card">
+      <h2>遊び方</h2>
+      <div class="rules">
+        <div class="rule"><div class="ic">賽</div><div><h3>賽を軍勢に配って命じる</h3><p>毎季、賽を振る。<em>1つの賽で1つの軍勢</em>に命令する。賽を選び、軍勢を選び、<em>光るマスへ進軍</em>。2つの賽を<em>強行軍</em>で合わせれば遠くまで行ける。</p></div></div>
+        <div class="rule"><div class="ic">内</div><div><h3>城にいる軍勢は内政もできる</h3><p>自分の城にいる軍勢に賽を配ると、進軍の代わりに内政。<em>徴兵</em>＝兵が戻る（どの目でも同じ・秋は多い）。<em>開墾</em>＝出目ぶん進み、たまると<em>石高+1</em>。<em>築城</em>＝出目ぶん普請が進み、成ると<em>守備兵の上限+1</em>。内政した軍勢はその季は動かない。</p></div></div>
+        <div class="rule"><div class="ic">石</div><div><h3>石高が国力</h3><p>領地の石高の合計で<em>賽の数と軍勢の枠</em>が決まる。京を持つと賽+1。石高の多い国ほど徴兵で兵が集まり、守備兵も多い。城を奪うと戦火で石高と普請が少し下がる。</p></div></div>
+        <div class="rule"><div class="ic">陣</div><div><h3>城攻めは隣から</h3><p>城を攻められるのは、<em>手番のはじめに城の隣にいる軍勢</em>だけ。まず城の隣に陣取り、次の季に攻める。敵の軍勢には遠くからでも襲いかかれる。</p></div></div>
+        <div class="rule"><div class="ic">戦</div><div><h3>合戦</h3><p>攻め手＝兵＋勢い（余った歩数）＋加勢。守り手＝兵（空き城は守備兵）＋城の守り＋加勢＋守りの賽。<em>出目ぴったりで着けば奇襲</em>（守りの賽なし）。<em>隣にいる味方1つにつき加勢＋2</em>。</p></div></div>
+        <div class="rule"><div class="ic">道</div><div><h3>街道・峠・海路・冬</h3><p>城と国境のマスを1歩ずつ進む。<em>峠（▲）と海路は2歩</em>。冬は峠と海路が3歩、雪国の街道も2歩。敵の軍勢の<em>隣に入ると足が止まる</em>。</p></div></div>
+        <div class="rule"><div class="ic">従</div><div><h3>臣従</h3><p>大きな大名の軍勢が城の隣に迫ると、小さな大名が戦わずに<em>臣従</em>することがある。あなたへの申し出は受けるか断るかを選べる。大きくなりすぎると<em>包囲網</em>で狙われる。</p></div></div>
+        <div class="rule"><div class="ic">委</div><div><h3>委任とおまかせ</h3><p>左の軍勢一覧の<em>「委」</em>を押した軍勢は、手番の終わりに残った賽でCPUの考えにしたがって動く。<em>「おまかせ」</em>は残りの賽で、まだ命令していない軍勢をまとめて動かす。</p></div></div>
+        <div class="rule"><div class="ic">天</div><div><h3>区切り・延長・天下統一</h3><p>永禄十二年の冬で<em>最初の区切り</em>。石高の順位で決着するか、<em>5年延長</em>して続けるか選べる（何度でも）。<em>全85か国</em>を治めれば天下統一。すべての城を失うと滅亡。メニューからいつでも決着できる。</p></div></div>
+        <div class="rule"><div class="ic">見</div><div><h3>地図を見る</h3><p>ホイールで拡大・縮小、ドラッグで移動。右の<em>小さな全国図</em>や地方のボタンで移動できる。敵の軍勢にマウスを乗せると次に届く範囲、城に乗せると石高や守りが見える。</p></div></div>
+      </div>
+      <div class="keys">操作：クリックで選択・移動　右クリック／Esc＝取り消し　Space＝賽を振る　1〜9＝賽を選ぶ　Shift＋クリック＝賽を合わせる　Q/W/E＝徴兵/開墾/築城　Z＝一手戻す　A＝おまかせ　Enter＝手番を終える　F＝早送り　S＝CPUの手番を飛ばす　0＝全国　H＝自領</div>
+      <div class="row-btns"><button id="b-help-close" class="big">閉じる</button></div>
+    </div>
+  </div>
+
+  <div id="intro" class="screen hidden">
+    <div class="card">
+      <h2>天下への道　<small>はじめに、これだけ</small></h2>
+      <div class="rules one">
+        <div class="rule"><div class="ic">賽</div><div><h3>出目を軍勢に配る</h3><p>賽をクリック → 自分の軍勢をクリック → <em>光る水色のマス</em>へ進軍。1つの賽で1つの軍勢が動く。</p></div></div>
+        <div class="rule"><div class="ic">内</div><div><h3>攻めるか、国を富ませるか</h3><p>自分の城にいる軍勢には<em>内政</em>（徴兵・開墾・築城）も命じられる。<em>石高</em>が増えると賽と軍勢が増える。</p></div></div>
+        <div class="rule"><div class="ic">陣</div><div><h3>城攻めは城の隣から</h3><p>敵の城の隣（赤い<em>「陣」</em>の旗）に進み、次の季に攻める。隣に味方がいれば加勢、<em>出目ぴったり</em>なら奇襲。</p></div></div>
+        <div class="rule"><div class="ic">天</div><div><h3>まずは10年</h3><p>永禄十二年の冬に、石高の順位で決着するか<em>延長</em>するかを選ぶ。全国を治めれば天下統一。</p></div></div>
+      </div>
+      <div class="row-btns" style="text-align:right;margin-top:14px"><button id="b-intro-help">くわしい遊び方</button>　<button id="b-intro-go" class="big primary">はじめる</button></div>
+    </div>
+  </div>
+
+  <div id="offer" class="screen hidden">
+    <div class="card">
+      <h2>臣従の申し出</h2>
+      <div id="offer-body"></div>
+      <div class="row-btns"><button id="b-offer-no">断る</button>　<button id="b-offer-yes" class="big primary">受ける</button></div>
+    </div>
+  </div>
+
+  <div id="decide" class="screen hidden">
+    <div class="card">
+      <h2 id="decide-head"></h2>
+      <div id="decide-sub"></div>
+      <div id="decide-rank"></div>
+      <div class="row-btns"><button id="b-conclude" class="big">ここで決着</button>　<button id="b-extend" class="big primary">5年延長して続ける</button></div>
+    </div>
+  </div>
+
+  <div id="slots" class="screen hidden">
+    <div class="card">
+      <h2 id="slots-h">記録</h2>
+      <div id="slot-list"></div>
+      <div class="row-btns"><button id="b-slots-close">閉じる</button></div>
+    </div>
+  </div>
+
+  <div id="result" class="screen hidden">
+    <div class="card">
+      <div id="res-head" class="big"></div>
+      <div id="res-sub" class="sub"></div>
+      <canvas id="res-chart" width="1280" height="360"></canvas>
+      <div id="res-stats" class="stats"></div>
+      <div class="row-btns">
+        <button id="b-again" class="big primary">同じ大名で再挑戦</button>
+        <button id="b-other" class="big">別の大名で遊ぶ</button>
+        <button id="b-res-map">地図を見る</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu" class="screen hidden">
+    <div class="card">
+      <h2>メニュー</h2>
+      <button id="b-m-resume" class="big primary">つづける</button>
+      <button id="b-m-save">記録する</button>
+      <button id="b-m-end">ここで決着</button>
+      <button id="b-m-help">遊び方</button>
+      <button id="b-m-restart">同じ大名で最初から</button>
+      <button id="b-m-title">タイトルへ（自動保存済み）</button>
+    </div>
+  </div>
+
+  <div id="loading" class="screen"><div>地図を描いています…</div></div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/proj.js"></script>
+<script src="js/mapgen.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
