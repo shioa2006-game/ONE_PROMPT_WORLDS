@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEYOND ONE PROMPT | ONE PROMPT WORLDS</title>
+<meta name="description" content="1プロンプトで生まれたゲームの中から有望な作品を選び、人間と Claude が改修を重ねて完成品をめざす場所です。開発中の作品も、そのまま遊べます。">
+<meta name="theme-color" content="#07060d">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="BEYOND ONE PROMPT | ONE PROMPT WORLDS">
+<meta property="og:description" content="ひとつのプロンプトの、その先へ。1プロンプトで生まれたゲームを、改修を重ねて完成品に。">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<div class="backdrop backdrop-beyond" aria-hidden="true">
+  <canvas class="motes" id="motes"></canvas>
+</div>
+
+<nav class="site-nav" aria-label="ギャラリーの切り替え">
+  <div class="wrap site-nav-inner">
+    <a class="site-brand" href="index.html"><img src="assets/favicon.svg" alt="" width="20" height="20"><span class="site-brand-text">ONE PROMPT WORLDS</span></a>
+    <ul class="tabs">
+      <li><a class="tab" href="index.html">WORLDS<span class="tab-count" data-count="worlds"></span></a></li>
+      <li><a class="tab" href="beyond.html" aria-current="page">BEYOND ONE PROMPT<span class="tab-count" data-count="beyond"></span></a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="kicker-mark" aria-hidden="true">&gt;</span> WORKS IN PROGRESS &middot; BUILT WITH CLAUDE</p>
+    <h1 class="title">
+      <span class="title-line">BEYOND</span>
+      <span class="title-line"><span class="title-worlds title-beyond">ONE PROMPT</span><span class="caret" aria-hidden="true"></span></span>
+    </h1>
+    <p class="tagline">ひとつのプロンプトの、<wbr>その先へ。</p>
+    <div class="intro">
+      <p class="intro-lead">1プロンプトで生まれた世界を、最後まで遊べる一本に。</p>
+      <p>WORLDS に並ぶのは、Claude が最初の指示文ひとつから作ったゲームです。</p>
+      <p>ここでは、その中から手応えのあった作品を選び、別のフォルダに写して改修を重ねていきます。</p>
+      <p>人間が遊んで気づいたことを伝え、Claude と何度もやりとりしながら、遊びごたえ・遊びやすさ・ボリュームを足していく。「1プロンプトだけ」の約束は、ここでは外しています。</p>
+      <p>完成をめざす途中の作品も、開発中のまま公開しています。原型は WORLDS にそのまま残してあるので、遊び比べることもできます。</p>
+    </div>
+  </div>
+</header>
+
+<main class="gallery" id="beyond" aria-label="BEYOND ONE PROMPT の作品">
+  <div class="wrap">
+    <section class="beyond-section" id="beyond-released" aria-labelledby="released-heading" hidden>
+      <div class="gallery-head">
+        <h2 class="gallery-title" id="released-heading">RELEASED<span class="gallery-title-ja">完成</span></h2>
+        <span class="gallery-rule" aria-hidden="true"></span>
+        <span class="gallery-count"></span>
+      </div>
+      <ul class="cards"></ul>
+    </section>
+
+    <section class="beyond-section" id="beyond-dev" aria-labelledby="dev-heading" hidden>
+      <div class="gallery-head">
+        <h2 class="gallery-title" id="dev-heading">IN DEVELOPMENT<span class="gallery-title-ja">開発中</span></h2>
+        <span class="gallery-rule" aria-hidden="true"></span>
+        <span class="gallery-count"></span>
+      </div>
+      <ul class="cards"></ul>
+    </section>
+
+    <div class="empty" id="beyond-empty" hidden>
+      <p class="empty-title">最初の作品を準備中です</p>
+      <p class="empty-text">改修を始めた作品は、開発中のままここに並びます。それまでは、原型の WORLDS で遊んでみてください。</p>
+      <a class="empty-link" href="index.html">WORLDS の作品を見る <span aria-hidden="true">&rarr;</span></a>
+    </div>
+
+    <noscript>
+      <p class="notice">ギャラリーの表示とゲームのプレイには JavaScript が必要です。</p>
+    </noscript>
+
+    <p class="note">各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定して作られています。音が出ます。開発中の作品は、更新で内容やセーブデータが変わることがあります。</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="footer-brand"><img src="assets/favicon.svg" alt="" width="20" height="20"> ONE PROMPT WORLDS</span>
+    <span class="footer-copy">ひとつのプロンプトの、その先へ。</span>
+  </div>
+</footer>
+
+<script src="assets/js/games.js"></script>
+<script src="assets/js/beyond.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

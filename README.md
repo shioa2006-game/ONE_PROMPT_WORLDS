@@ -8,9 +8,14 @@
 
 このリポジトリは、そうして作られたブラウザゲームと、それらをまとめて遊べるギャラリーサイトです。
 
-### ▶ [ギャラリーで遊ぶ](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/)
+ギャラリーは2つのタブに分かれています。
 
-## 作品
+- **WORLDS**：1回の指示文で出力されたゲームを、そのまま置く場所（原型）
+- **BEYOND ONE PROMPT**：WORLDS の中から有望な作品を選び、人間と Claude で改修を重ねて完成品をめざす場所（開発中の作品も公開）
+
+### ▶ [ギャラリーで遊ぶ](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/)　／　[BEYOND ONE PROMPT](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/beyond.html)
+
+## WORLDS の作品
 
 | # | タイトル | ジャンル | 主な操作 | 制作AI |
 | --- | --- | --- | --- | --- |
@@ -49,6 +54,10 @@
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
 操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md) / [game13](game13/README.md) / [game14](game14/README.md) / [game15](game15/README.md)）にあります。
 
+## BEYOND ONE PROMPT の作品
+
+まだありません。改修を始めた作品から、開発中のまま並べていきます。
+
 > [!WARNING]
 > 各フォルダには、攻略・ネタバレを含む資料（`NOTES_ネタバレ注意.md`、`NETABARE*.md`、`VERIFICATION_検証記録.md`、`SPOILERS.md`、`VERIFICATION.md`、`NOTES_15.md`、`VERIFICATION_15.md`）や検証用の `tools/` も入っています。初めて遊ぶ前には開かないことをおすすめします。
 
@@ -65,19 +74,24 @@ python -m http.server 8000 --bind 127.0.0.1
 ## フォルダ構成
 
 ```
-index.html                  ギャラリーのトップページ
+index.html                  ギャラリーのトップページ（WORLDS タブ）
+beyond.html                 BEYOND ONE PROMPT タブ
 assets/
   css/style.css             スタイル
-  js/games.js               作品リスト（ここを編集すると作品が増える）
-  js/main.js                カードの組み立てと背景の演出
+  js/games.js               WORLDS の作品リスト（ここを編集すると作品が増える）
+  js/beyond.js              BEYOND ONE PROMPT の作品リスト（改修版）
+  js/main.js                カードとタブの組み立て、背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/   各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/   WORLDS の各作品（それぞれ index.html から起動）
+beyond1/  beyond2/ …        BEYOND ONE PROMPT の各作品（原型をコピーして改修したもの）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書（01〜08、Claude Fable 5.2）
 Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12・14・15 は Claude Opus 5.5、13 は Claude Fable 5.2）
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
 
-## 作品を追加する
+## WORLDS に作品を追加する
+
+1回の指示文で出力されたゲームだけを置きます。
 
 1. 新しいゲームを `game4/` のようなフォルダに置きます（`game4/index.html` で起動する形）。
 2. ゲーム画面のスクリーンショットを 16:9 で撮り、1280×720 と 640×360 の WebP にして `assets/thumbs/` に置きます。
@@ -99,6 +113,40 @@ Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（0
 
 並び順がそのまま表示順になり、「WORLD 04」の番号と作品数は自動で更新されます。
 パスはすべて相対パスで書いてください（先頭に `/` を付けない）。GitHub Pages のプロジェクトサイトでもそのまま動きます。
+
+## BEYOND ONE PROMPT に改修版を追加する
+
+WORLDS の原型（`gameN/`）は、1回の指示文で出力されたまま残します（致命的なバグの修正だけは例外）。
+改修したくなったら、原型をコピーして別のフォルダで直していきます。
+
+1. 原型のフォルダを `beyondN/` にコピーします。`N` は着手した順の連番です（原型の番号とはそろえません）。
+2. `beyondN/` の中で改修します。更新の内容は `beyondN/CHANGELOG.md` に書きます（ネタバレは書かない）。
+3. サムネイルを `assets/thumbs/beyondN.webp`（1280×720）と `beyondN-640.webp`（640×360）で用意します。
+4. `assets/js/beyond.js` の配列の末尾に、作品の情報を1件追加します。
+
+```js
+{
+  title: '作品名',
+  genre: 'ジャンル',
+  description: '1〜2行の紹介文（ネタバレは書かない）',
+  path: 'beyond1/index.html',
+  basedOn: ['game3'],            // 原型のフォルダ名（複数の原型をまとめたら複数書く）
+  status: 'dev',                 // 'dev'＝開発中、'released'＝完成
+  version: '0.1',
+  updatedDate: '2026-11-20',
+  changelog: 'https://github.com/shioa2006-game/ONE_PROMPT_WORLDS/blob/main/beyond1/CHANGELOG.md',
+  thumbnail: 'assets/thumbs/beyond1.webp',
+  thumbnailSmall: 'assets/thumbs/beyond1-640.webp',
+  controls: 'マウス',
+  ai: 'Claude Opus 5.5',
+  accent: '#ffb85c'
+}
+```
+
+- 「BEYOND 01」の番号はフォルダ名の数字から付き、タブの作品数も自動で更新されます。
+- `status` が `'released'` の作品は「完成」、それ以外は「開発中」の欄に並びます。
+- `basedOn` に書いた原型のカードには、WORLDS 側で「改修中 BEYOND 01 →」の案内バッジが自動で付きます。
+- 改修を進めたら、`version` と `updatedDate` を更新します。
 
 ## 公開
 
