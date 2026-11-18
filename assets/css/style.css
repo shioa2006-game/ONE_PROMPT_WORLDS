@@ -115,13 +115,13 @@ a { color: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 12px 20px;
+  padding-block: 9px;
 }
 
 .site-brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 0;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
@@ -133,63 +133,102 @@ a { color: inherit; }
 
 .site-brand img { flex: none; }
 
+/* segmented switch: the current gallery is filled with its own colours */
 .tabs {
   display: flex;
   gap: 4px;
   margin: 0;
-  padding: 0;
+  padding: 4px;
   list-style: none;
+  border: 1px solid var(--line-hi);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
+.tabs li { display: flex; }
+
 .tab {
-  position: relative;
+  --tab-fill: linear-gradient(100deg, var(--w1), var(--w2) 55%, var(--w3));
+  --tab-glow: rgba(255, 168, 212, 0.45);
   display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 15px 12px 13px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px 7px 13px;
+  border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
-  transition: color 0.2s;
+  transition: background 0.25s, color 0.25s, box-shadow 0.3s;
 }
 
-.tab::after {
+.tab-beyond {
+  --tab-fill: linear-gradient(100deg, var(--glow), #ff8f7a 55%, #c9a0ff);
+  --tab-glow: rgba(255, 143, 122, 0.45);
+}
+
+/* colour dot: tells the two galleries apart at a glance */
+.tab::before {
   content: "";
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--glow);
-  box-shadow: 0 0 12px rgba(255, 213, 154, 0.6);
-  transform: scaleX(0);
-  transition: transform 0.3s var(--ease-out);
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tab-fill);
 }
 
 .tab-count {
+  min-width: 1.9em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
   font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  color: var(--faint);
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--muted);
 }
 
-.tab[aria-current="page"] { color: var(--text); }
-.tab[aria-current="page"]::after { transform: none; }
+.tab-count:empty { display: none; }
+
+.tab[aria-current="page"] {
+  background: var(--tab-fill);
+  color: #120e14;
+  box-shadow: 0 4px 22px -6px var(--tab-glow);
+}
+
+.tab[aria-current="page"]::before {
+  background: #120e14;
+  opacity: 0.5;
+}
+
+.tab[aria-current="page"] .tab-count {
+  background: rgba(18, 14, 20, 0.16);
+  color: #120e14;
+}
 
 @media (hover: hover) {
-  .tab:hover, .site-brand:hover { color: var(--text); }
+  .site-brand:hover { color: var(--text); }
+  .tab:not([aria-current="page"]):hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .tab:focus-visible,
 .site-brand:focus-visible {
   outline: 2px solid var(--glow);
-  outline-offset: -2px;
-  border-radius: 6px;
+  outline-offset: 2px;
+}
+
+.site-brand:focus-visible { border-radius: 6px; }
+
+/* the brand name gives way to the switch first, then the brand mark */
+@media (max-width: 879px) {
+  .site-brand-text { display: none; }
 }
 
 /* ---------- hero ---------- */
@@ -876,14 +915,29 @@ a { color: inherit; }
 /* ---------- small screens ---------- */
 
 @media (max-width: 639px) {
-  .site-brand-text { display: none; }
-  .tab { padding-inline: 9px; letter-spacing: 0.08em; }
-  .tab::after { left: 9px; right: 9px; }
+  .site-brand { display: none; }
+  .site-nav-inner { padding-block: 8px; }
+  .tabs { width: 100%; padding: 3px; gap: 3px; }
+  .tabs li { flex: 1 1 auto; }
+  .tab {
+    flex: 1;
+    justify-content: center;
+    gap: 7px;
+    padding: 7px 10px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+  .tab::before { width: 6px; height: 6px; }
+  .tab-count { padding: 1px 5px; }
   .kicker { font-size: 11px; letter-spacing: 0.16em; }
   .intro { line-height: 1.95; }
   .intro p + p { margin-top: 0.35em; }
   .card { --pad: 16px; }
   .play { padding: 10px 16px 10px 14px; }
+}
+
+@media (max-width: 359px) {
+  .tab-long { display: none; }
 }
 
 /* ---------- reduced motion ---------- */
