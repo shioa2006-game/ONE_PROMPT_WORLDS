@@ -435,9 +435,14 @@
     trayDice = [];
     if (!S || !S.dice.length) {
       const n = S ? E.diceCount(S, S.player) : 3;
+      box.classList.remove('rows2'); box.style.maxWidth = '';
       box.innerHTML = '<span class="empty">賽 ' + n + ' 個</span>';
       return;
     }
+    // 7個以上は2段に分ける（1段は最大5個。賽の大きさと奥行きは変えない）
+    const n = S.dice.length;
+    box.classList.toggle('rows2', n >= 7);
+    box.style.maxWidth = n >= 7 ? (Math.ceil(n / 2) * 54 + (Math.ceil(n / 2) - 1) * 14) + 'px' : '';
     S.dice.forEach((dv, i) => {
       const d = makeDie(i);
       d.el.addEventListener('click', ev => { ev.stopPropagation(); onDieClick(i, ev.shiftKey); });
@@ -508,8 +513,18 @@
     $('st-prov-box').classList.toggle('kyo', kyo);
     $('st-kyo').textContent = kyo ? '京を掌握' : '国';
     const myArmies = V.armies.filter(a => a.c === S.player).length;
-    $('st-army').textContent = myArmies; $('st-slot').textContent = '/' + E.slots(V, S.player);
-    $('st-dice').textContent = E.diceCount(V, S.player);
+    const slotN = E.slots(V, S.player);
+    $('st-army').textContent = myArmies; $('st-slot').textContent = '/' + slotN;
+    $('st-slot').classList.toggle('over', myArmies > slotN);
+    $('st-army-box').title = myArmies > slotN ? '軍勢の枠（石高で決まる）より多い。いまの軍勢はそのまま残るが、枠に空きができるまで新しい軍勢は出陣しない' : '軍勢の数／軍勢の枠（石高で決まる）';
+    $('st-army-l').textContent = myArmies > slotN ? '軍勢・枠超え' : '軍勢';
+    // 今季に振った賽の数と、石高から決まる次の季の数がちがうときは両方を出す
+    const nextDice = E.diceCount(V, S.player);
+    const nowDice = S.cur === S.player && S.dice && S.dice.length ? S.dice.length : nextDice;
+    $('st-dice').textContent = nowDice;
+    $('st-dice-l').textContent = nowDice !== nextDice ? '賽・次季' + nextDice : '賽';
+    $('st-dice-l').classList.toggle('next', nowDice !== nextDice);
+    $('st-dice-box').title = nowDice !== nextDice ? '今季は' + nowDice + '個。石高が変わったので、次の季から' + nextDice + '個' : '賽の数（石高で決まる。京を持つと+1）';
     const total = Object.values(rk.k).reduce((a, b) => a + b, 0) || 1;
     $('goalfill').style.width = Math.min(100, (rk.k[S.player] || 0) / total * 100) + '%';
     $('goaltxt').innerHTML = '全国の石高のうち <b>' + Math.round((rk.k[S.player] || 0) / total * 100) + '%</b>　' + E.P + 'か国すべてで天下統一';
@@ -568,7 +583,8 @@
     layoutArmies();
     const list = V.armies.filter(a => a.c === S.player);
     const myTurn = S.cur === S.player && S.phase === 'move';
-    $('armies-h').textContent = '軍勢 ' + list.length + '/' + E.slots(V, S.player);
+    const sl = E.slots(V, S.player);
+    $('armies-h').textContent = '軍勢 ' + list.length + '/' + sl + (list.length > sl ? '（枠超え：新しい出陣なし）' : '');
     $('armies-list').innerHTML = list.map(a => {
       const sa = E.armyById(S, a.id) || a;
       const dom = U.armyDom[a.id] || (myTurn && sa.dom);
@@ -582,7 +598,7 @@
       if (ev.target.classList.contains('dg')) return;
       const id = Number(el.dataset.id);
       const a = V.armies.find(x => x.id === id);
-      if (a) R.flyTo(POS[a.n][0], POS[a.n][1], Math.max(R.zoom.z, 0.95 / Math.min(innerWidth / R.W, innerHeight / R.H)), 350);
+      if (a && !R.onScreen(POS[a.n][0], POS[a.n][1], -140)) R.flyTo(POS[a.n][0], POS[a.n][1], Math.max(R.zoom.z, 0.95 / Math.min(innerWidth / R.W, innerHeight / R.H)), 350);
       if (S.cur === S.player && S.phase === 'move' && !busy) onArmyClick(id);
     }));
     $('armies-list').querySelectorAll('.dg').forEach(el => el.addEventListener('click', ev => {
@@ -694,6 +710,7 @@
       hud();
       homeView(0);
       if (S.phase === 'decide') { askDecide(); return true; }
+      if (S.offers && S.offers.length && S.cur === S.player) { handleOffers().then(() => resumePlayerTurn()); return true; }
       resumePlayerTurn();
       return true;
     } catch (e) { console.error(e); return false; }
@@ -906,6 +923,7 @@
   }
   function onDieClick(i, shift) {
     if (busy || !S || S.phase !== 'move' || S.cur !== S.player) return;
+    disarmEnd(false);
     if (S.dice[i].u) { A.S.deny(); return; }
     const add = shift || sel.combine;
     if (sel.dice.includes(i)) sel.dice = sel.dice.filter(x => x !== i);
@@ -917,6 +935,7 @@
     computeSel();
   }
   function onArmyClick(id) {
+    disarmEnd(false);
     const a = E.armyById(S, id);
     if (!a || a.c !== S.player) return false;
     if (a.mv) { A.S.deny(); setPrompt('この軍勢は今季もう命令を受けた。'); return true; }
@@ -1140,21 +1159,31 @@
       if (e.type === 'govern') U.armyDom[e.army] = e.kind;
     }
   }
-  let endArmed = 0;
+  // 賽が残っているときの「もう一度で終える」。期限が切れたら、ボタンと案内文を両方もとに戻す
+  let endArmed = false, endTimer = null;
+  const END_CONFIRM_MS = 3000;
+  function disarmEnd(restore) {
+    if (!endArmed) return;
+    endArmed = false;
+    clearTimeout(endTimer);
+    $('b-end').textContent = '手番を終える';
+    $('b-end').classList.remove('armed');
+    if (restore && !busy && S && S.cur === S.player && S.phase === 'move') { if (sel.army || sel.dice.length) computeSel(); else enterMovePromptOnly(); }
+  }
   async function endTurn() {
     if (busy || !S || S.cur !== S.player || S.phase !== 'move') return;
     const fd = freeDice(), ua = unmovedArmies();
     const dgLeft = ua.filter(a => a.dg).length;
-    if (fd.length && ua.length > dgLeft && now() - endArmed > 2.5) {
-      endArmed = now();
+    if (fd.length && ua.length > dgLeft && !endArmed) {
+      endArmed = true;
       A.S.click();
       $('b-end').textContent = 'もう一度で終える';
-      setPrompt('賽がまだ <em>' + fd.length + '個</em> 残っている。<br>このまま終えるなら、もう一度「手番を終える」（命令しない軍勢は休む）。' + (dgLeft ? '<br><span class="k">委任した軍勢は残りの賽で動く。</span>' : ''));
-      setTimeout(() => { $('b-end').textContent = '手番を終える'; }, 2500);
+      $('b-end').classList.add('armed');
+      setPrompt('賽がまだ <em>' + fd.length + '個</em> 残っている。<br>このまま終えるなら、3秒以内にもう一度「手番を終える」（命令しない軍勢は休む）。' + (dgLeft ? '<br><span class="k">委任した軍勢は残りの賽で動く。</span>' : ''));
+      endTimer = setTimeout(() => disarmEnd(true), END_CONFIRM_MS);
       return;
     }
-    endArmed = 0;
-    $('b-end').textContent = '手番を終える';
+    disarmEnd(false);
     clearSel();
     busy = true; setButtons(); setHint(null);
     U.canAct = {};
@@ -1447,6 +1476,8 @@
     if (mode !== 'play') return;
     if (busy) { speed.hurry = true; return; }
     if (!S || S.cur !== S.player) return;
+    // カメラの移動中に押されたら、移動を終わらせるだけにする（動いている地図の上で誤って命令しない）
+    if (R.camMoving()) { R.finishCam(); return; }
     const h = hitAt(ev, hlSet());
     if (S.phase === 'place') {
       const opts = E.spawnOptions(S, S.player);
@@ -1497,7 +1528,7 @@
     if (ev.key === 'Escape' && !$('menu').classList.contains('hidden')) { show('menu', false); return; }
     if (ev.key === 'Escape' && !$('slots').classList.contains('hidden')) { show('slots', false); return; }
     if (mode !== 'play') return;
-    if (!$('help').classList.contains('hidden') || !$('menu').classList.contains('hidden')) return;
+    if (modalOpen()) return;
     A.ensure();
     const k = ev.key;
     if (k === 'f' || k === 'F') { toggleFast(); return; }
@@ -1509,7 +1540,6 @@
       if (/^[1-9]$/.test(k) && S && S.cur === S.player && S.phase === 'move') pendingDie = Number(k) - 1;
       return;
     }
-    if (!$('decide').classList.contains('hidden')) return;
     if (k === ' ') { ev.preventDefault(); if (S.phase === 'roll') doRoll(); else if (S.phase === 'place') { A.S.deny(); toast('先に、新しい軍勢の<em>出陣先</em>（光る城）をクリック。出さないなら「出陣しない」'); } return; }
     if (k === 'Enter') { endTurn(); return; }
     if (k === 'Escape') { clearSel(); enterMovePromptOnly(); setButtons(); renderArmyList(); return; }
@@ -1518,6 +1548,9 @@
     if (/^[qweQWE]$/.test(k) && !$('gov').classList.contains('hidden')) { doGovern({ q: 'recruit', w: 'develop', e: 'fortify' }[k.toLowerCase()]); return; }
     if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (S.dice[i]) onDieClick(i, ev.shiftKey); }
   });
+  // 遊ぶ画面の上に重なる窓（この間は背後のゲームを操作させない）
+  const MODALS = ['offer', 'decide', 'slots', 'menu', 'help', 'intro'];
+  function modalOpen() { return MODALS.some(id => !$(id).classList.contains('hidden')); }
   function toggleFast() { speed.fast = !speed.fast; speed.mul = busy && S && S.cur !== S.player ? (speed.fast ? 3 : 1.3) : speed.mul; $('b-fast').classList.toggle('on', speed.fast); }
   function answerOffer(v) { if (offerAnswer) { const f = offerAnswer; offerAnswer = null; A.S.click(); f(v); } }
 

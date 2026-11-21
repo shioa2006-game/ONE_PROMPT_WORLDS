@@ -306,6 +306,9 @@
     applyView();
     if (k >= 1) cam = null;
   }
+  // カメラが動いている途中か。途中でクリックされたら、動きを終わらせる（その位置で操作させない）
+  const camMoving = () => !!cam;
+  function finishCam() { if (!cam) return; zoom = Object.assign({}, cam.to); cam = null; applyView(); }
   const toWorld = (sx, sy) => [(sx - view.ox) / view.s, (sy - view.oy) / view.s];
   const toScreen = (wx, wy) => [view.ox + wx * view.s, view.oy + wy * view.s];
   function onScreen(wx, wy, m) { const [x, y] = toScreen(wx, wy); m = m || 0; return x > -m && y > -m && x < view.w + m && y < view.h + m; }
@@ -532,6 +535,7 @@
     const sel = U.selArmy;
     const list = V.armies.slice().sort((a, b) => (POS[a.n][1] - POS[b.n][1]));
     const me = U.me;
+    const tokens = [];
     for (const a of list) {
       if (U.hide && U.hide[a.id]) continue;
       const wp = drawn[a.id];
@@ -562,14 +566,32 @@
         x.restore();
       }
       if (U.heal && U.heal[a.id]) label(x, '+' + U.heal[a.id], p[0] - 2, p[1] + 26 * g, '700 ' + Math.round(12 * g + 1) + 'px ' + FONT_G, '#1f7a3a', 'rgba(244,236,214,0.9)');
+      tokens.push([p[0], p[1] - hop, a, g * (U.armyScale && U.armyScale[a.id] != null ? U.armyScale[a.id] : 1)]);
+    }
+    if (lvl >= 1 || tokens.some(t => t[2].c === me)) {
+      for (const [px, py, a, sc] of tokens) {
+        if (lvl === 0 && a.c !== me) continue;
+        if (sc <= 0.05) continue;
+        const r = 14, tcol = a.t <= 3 ? '#b8281c' : '#1c140c';
+        x.save(); x.translate(px, py); x.scale(sc, sc);
+        x.beginPath(); x.arc(r * 0.78, r * 0.62, 8, 0, Math.PI * 2); x.fillStyle = '#fbf6e8'; x.fill(); x.lineWidth = 1.5; x.strokeStyle = tcol; x.stroke();
+        x.fillStyle = tcol; x.font = '700 11px ' + FONT_G; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(a.t), r * 0.78, r * 0.62 + 0.5);
+        x.restore();
+      }
     }
     // 国名（軍勢の上に描いて読めるように）
     if (lvl >= 1) {
       const fs = Math.round(14 * g);
+      const tr = 17 * g;
       for (let p = 0; p < E.P; p++) {
         const q = SP[p];
         if (!vis(q, 40)) continue;
-        label(x, D.PROV[p].n, q[0], q[1] + 27 * g, '700 ' + fs + 'px ' + FONT_M, '#2a1d10', 'rgba(244,236,214,0.92)');
+        const ly = q[1] + 27 * g, hw = D.PROV[p].n.length * fs * 0.52;
+        let hit = false;
+        for (const t of tokens) { if (t[3] <= 0.05) continue; if (Math.abs(t[0] - q[0]) < hw + tr && Math.abs(t[1] - ly) < fs * 0.5 + tr && !(t[0] === q[0] && t[1] === q[1])) { hit = true; break; } }
+        if (hit) x.globalAlpha = 0.38;
+        label(x, D.PROV[p].n, q[0], ly, '700 ' + fs + 'px ' + FONT_M, '#2a1d10', 'rgba(244,236,214,0.92)');
+        x.globalAlpha = 1;
       }
     }
     if (U.winter) {
@@ -735,7 +757,7 @@
 
   root.SG.R = {
     init, resize, draw, hitTest, toWorld, toScreen, onScreen, zoomAt, panBy, resetView, flyTo, fitBox, castleGlyph, armyToken, dieFace, roundRect, label,
-    drawMini, miniToWorld, glyphScale, detail,
+    drawMini, miniToWorld, glyphScale, detail, camMoving, finishCam,
     COL, FONT_M, FONT_G, POS, W, H, get view() { return view; }, get zoom() { return zoom; }, markDirty() { terrDirty = true; mini.dirty = true; }, get M() { return M; },
   };
 })(window);
