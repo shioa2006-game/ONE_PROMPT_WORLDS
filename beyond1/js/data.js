@@ -323,7 +323,7 @@ shirakawa shimotsuke R; shirakawa hitachi P; shirakawa iwaki P; iwaki hitachi R;
     capGar: 1, capitalDef: 1, siegeAdj: 1, garWithArmy: 0, lastStand: 2,
     // 国力（石高の合計）から賽と軍勢の枠
     diceBase: 3, diceDiv: 12, diceMax: 8,
-    slotBase: 2, slotDiv: 7, slotMax: 12,
+    slotBase: 2, slotDiv: 7, slotMax: 24,
     // 内政
     recruitBase: 2, recruitDiv: 2, recruitAutumn: 1,
     devNeed0: 5, devNeedStep: 3, devCap: 2,
