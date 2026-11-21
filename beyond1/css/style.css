@@ -304,3 +304,4 @@ button.glow { animation: glow 1.4s ease-in-out infinite; }
 #title .btns button:not(.big) { width: 200px; }
 #intro h2 small { font-family: var(--gothic); font-size: 14px; color: #d9caa3; }
 #result .stats { flex-wrap: wrap; gap: 10px 20px; }
+#siege-summary { white-space: pre-line; font-size: 12px; color: var(--gold); }

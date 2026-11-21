@@ -329,15 +329,50 @@
   }
 
   function apply(s, m) {
+    if (m.kind === 'prepare') return E.prepareSiege(s, m.army, m.idxs[0], m.target);
     if (m.kind === 'govern') return E.govern(s, m.army, m.idxs[0], m.gov);
     return E.move(s, m.army, m.idxs, m.target);
+  }
+
+  // 次季に単骰1・5、または強行軍8で攻める機会を、賽の使いやすさで重み付けする。
+  function siegeChance(s, a, target, extra) {
+    let best = 0;
+    for (const [budget, weight] of [[1, 0.55], [5, 0.80], [8, 0.85]]) {
+      const { A, D, kishu } = E.preview(s, a, target, budget - 1);
+      const diff = A.total + extra - D.total;
+      const chance = kishu ? Number(diff > 0) : Math.min(6, Math.max(0, diff - 1)) / 6;
+      best = Math.max(best, chance * weight);
+    }
+    return best;
+  }
+
+  function considerSiege(s, ordinary, filter) {
+    let best = ordinary;
+    const dice = [];
+    for (let i = 0; i < s.dice.length; i++) {
+      const d = s.dice[i];
+      if (!d.u && !dice.some(j => s.dice[j].v === d.v)) dice.push(i);
+    }
+    for (const a of s.armies) {
+      if (a.c !== s.cur || a.mv || a.t < R.siegeMinArmy || nodes[a.n].kind !== 'b' || (filter && !filter(a))) continue;
+      for (const i of dice) for (const { target, before, after } of E.siegeOptions(s, a, i)) {
+        const defender = E.armyAt(s, target);
+        const value = 9 + 2.5 * s.kok[target] + (defender ? defender.t : 0) + (target === KYO ? 8 : 0);
+        const now = siegeChance(s, a, target, 0);
+        const next = siegeChance(s, a, target, after - before);
+        const later = siegeChance(s, a, target, Math.min(R.siegeMax, after + R.siegeLowGain) - before);
+        const risk = defender ? E.preview(s, defender, a.n, Math.max(0, 4 - E.nodeCost(s, defender.c, a.n))).p : 0;
+        const score = value * (0.8 * (next - now) + 0.27 * (later - next)) - 0.7 - 3 * risk - 0.13 * s.dice[i].v;
+        if (score >= 0.3 && (!best || score > best.score)) best = { kind: 'prepare', army: a.id, idxs: [i], target, score };
+      }
+    }
+    return best;
   }
 
   // 1手選ぶ（なければ null）
   function nextMove(s, c, opt, filter) {
     const b = evaluate(s, c, opt, filter);
-    if (!b || b.score < 0.3) return null;
-    return b;
+    return considerSiege(s, b && b.score >= 0.3 ? b : null, filter);
   }
 
   // ───── その他の大名（簡易CPU） ─────
@@ -441,7 +476,7 @@
     if (s.phase === 'roll') ev.push.apply(ev, E.roll(s));
     if (full) ev.push.apply(ev, maybeReroll(s, c, opt));
     for (let guard = 0; guard < 14 && !s.over; guard++) {
-      const m = full ? nextMove(s, c, opt) : simpleNext(s, c);
+      const m = full ? nextMove(s, c, opt) : considerSiege(s, simpleNext(s, c));
       if (!m) break;
       const e = apply(s, m);
       if (!e) break;

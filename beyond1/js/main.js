@@ -7,7 +7,7 @@
   const POS = MAP.POS;
   const SAVE_KEY = 'saigakeT_save', SLOT_KEY = 'saigakeT_slot', TUT_KEY = 'saigakeT_tut';
   const PN = p => D.PROV[p].n;
-  const GOV = { recruit: '徴兵', develop: '開墾', fortify: '築城' };
+  const GOV = { recruit: '徴兵', develop: '開墾', fortify: '築城', prepare: '攻城準備' };
 
   let S = null, V = null, BG = null;
   const U = { fx: [], spread: {}, hop: {}, armyPos: {}, moved: {}, armyDie: {}, armyDom: {}, heal: {}, hide: {}, armyScale: {}, me: null };
@@ -363,6 +363,19 @@
       case 'submit': await animSubmit(e); break;
       case 'heal': await animHeal(e); break;
       case 'govern': await animGovern(e); break;
+      case 'prepare': {
+        if (isMe(e.clan) || isMe(V.owner[e.target])) {
+          const msg = CL[e.clan].n + '軍、' + PN(e.target) + 'の攻城準備 ' + e.before + ' → ' + e.after;
+          addLog(msg, isMe(e.clan) ? 'me' : 'bad', e.clan);
+          if (!isMe(e.clan)) noteNews(msg, e.clan, 4);
+        }
+        break;
+      }
+      case 'disrupt': {
+        const army = vArmy(e.army);
+        if (army && (isMe(army.c) || isMe(S.cur))) addLog(CL[army.c].n + '軍の攻城準備 ' + e.before + ' → ' + e.after, '', army.c);
+        break;
+      }
       case 'dice': if (isMe((vArmy(e.army) || {}).c)) { U.moved[e.army] = true; U.armyDie[e.army] = e.used.map(i => S.dice[i] ? S.dice[i].v : 0).reduce((a, b) => a + b, 0); } break;
       case 'coalition':
         addLog(CL[e.clan].n + '包囲網が結ばれた', e.clan === S.player ? 'bad' : '', e.clan);
@@ -581,13 +594,14 @@
     const box = $('armies');
     if (!S || !V || mode !== 'play') return;
     layoutArmies();
+    siegeSummary();
     const list = V.armies.filter(a => a.c === S.player);
     const myTurn = S.cur === S.player && S.phase === 'move';
     const sl = E.slots(V, S.player);
     $('armies-h').textContent = '軍勢 ' + list.length + '/' + sl + (list.length > sl ? '（枠超え：新しい出陣なし）' : '');
     $('armies-list').innerHTML = list.map(a => {
       const sa = E.armyById(S, a.id) || a;
-      const dom = U.armyDom[a.id] || (myTurn && sa.dom);
+      const dom = U.armyDom[a.id] || (myTurn && (sa.dom || (sa.mv && sa.siegePlan && 'prepare')));
       const done = U.moved[a.id] || dom || (myTurn && sa.mv);
       const st = dom ? GOV[dom] : done ? '済' : sa.dg ? '委任' : myTurn && !sa.mv ? '未' : '';
       const cls = (sel.army === a.id ? ' sel' : '') + (done ? ' done' : '');
@@ -661,6 +675,7 @@
   const URLQ = new URLSearchParams(root.location.search);
   let introShown = false, introDone = null;
   function resetUI() {
+    undoStack = []; pendingDie = null; clearSel();
     logs = []; $('log').innerHTML = '';
     U.spread = {}; U.fx = []; U.moved = {}; U.armyDie = {}; U.armyDom = {}; U.nodeHL = null; U.armyHint = null; U.flash = null;
     U.me = S ? S.player : null;
@@ -1000,8 +1015,55 @@
     else if (!r.moves.length) msg += '<br><span class="k">この目では動ける場所がない。</span>';
     setPrompt(msg);
     if (home && sel.dice.length === 1) showGov(a, S.dice[sel.dice[0]].v);
+    else showSiege(a);
     setButtons();
   }
+  // 軍勢・賽を選んだときの攻城準備。点数と実行可否はエンジンに問い合わせる。
+  function showSiege(a) {
+    if (E.nodes[a.n].kind !== 'b') return;
+    const targets = E.adj[a.n].filter(p => S.owner[p] && S.owner[p] !== a.c);
+    if (!targets.length) return;
+    const one = sel.dice.length === 1;
+    const choices = one ? E.siegeOptions(S, a, sel.dice[0]) : [];
+    const box = $('gov');
+    govArmy = a.id;
+    const heading = document.createElement('div');
+    heading.className = 'hd';
+    heading.textContent = '攻城準備　この季は国境に留まる';
+    box.replaceChildren(heading);
+    for (const p of targets) {
+      const option = choices.find(o => o.target === p);
+      const points = E.siegePoints(S, a, p);
+      const button = document.createElement('button');
+      button.className = 'gv';
+      button.dataset.target = p;
+      button.disabled = !option;
+      const effect = option ? points + ' → ' + option.after + ' / 6' :
+        points === E.R.siegeMax ? '準備完了　＋6' : a.t < E.R.siegeMinArmy ? '準備には兵8以上が必要' : '賽を1個選ぶ';
+      button.textContent = PN(p) + '・' + D.PROV[p].c + '　' + effect;
+      button.addEventListener('click', ev => { ev.stopPropagation(); doStationaryOrder('prepare', p); });
+      box.append(button);
+    }
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = '今攻めるなら地図の×印を選択。準備は次にこの城を攻めるときに使う。移動や目標変更で失う。';
+    box.append(note);
+    box.classList.remove('hidden');
+    $('tip').classList.add('hidden');
+    placeGov();
+  }
+
+  function siegeSummary() {
+    const lines = [];
+    for (const a of V.armies) {
+      const p = a.siegePlan?.target;
+      if (p == null || (a.c !== S.player && V.owner[p] !== S.player)) continue;
+      const points = E.siegePoints(V, a, p);
+      if (points) lines.push(CL[a.c].n + '軍 → ' + PN(p) + '　準備 +' + points);
+    }
+    $('siege-summary').textContent = lines.join('\n');
+  }
+
   // 内政の窓
   let govArmy = null;
   function govText(kind, o) {
@@ -1030,7 +1092,7 @@
     }).join('');
     box.innerHTML = '<div class="hd">内政　' + PN(p) + '・' + D.PROV[p].c + '　<small>出目 ' + v + '</small></div>' + rows +
       '<div class="note">徴兵はどの目でも同じ。開墾と築城は大きい目ほど進む。</div>';
-    box.querySelectorAll('.gv').forEach(el => el.addEventListener('click', ev => { ev.stopPropagation(); doGovern(el.dataset.k); }));
+    box.querySelectorAll('.gv').forEach(el => el.addEventListener('click', ev => { ev.stopPropagation(); doStationaryOrder(el.dataset.k); }));
     box.classList.remove('hidden');
     $('tip').classList.add('hidden');
     placeGov();
@@ -1048,11 +1110,11 @@
     box.style.bottom = ((innerHeight - tr.top) / z + 8) + 'px';
   }
   function hideGov() { $('gov').classList.add('hidden'); govArmy = null; }
-  async function doGovern(kind) {
+  async function doStationaryOrder(kind, target) {
     if (busy || !sel.army || sel.dice.length !== 1) return;
     const before = JSON.stringify(S);
     const id = sel.army, di = sel.dice[0], v = S.dice[di].v;
-    const ev = E.govern(S, id, di, kind);
+    const ev = kind === 'prepare' ? E.prepareSiege(S, id, di, target) : E.govern(S, id, di, kind);
     if (!ev) { A.S.deny(); return; }
     undoStack.push({ s: before, moved: Object.assign({}, U.moved), die: Object.assign({}, U.armyDie), dom: Object.assign({}, U.armyDom) });
     U.moved[id] = true; U.armyDie[id] = v; U.armyDom[id] = kind;
@@ -1157,6 +1219,7 @@
     for (const e of ev) {
       if (e.type === 'dice') U.moved[e.army] = true;
       if (e.type === 'govern') U.armyDom[e.army] = e.kind;
+      if (e.type === 'prepare') U.armyDom[e.army] = 'prepare';
     }
   }
   // 賽が残っているときの「もう一度で終える」。期限が切れたら、ボタンと案内文を両方もとに戻す
@@ -1545,7 +1608,7 @@
     if (k === 'Escape') { clearSel(); enterMovePromptOnly(); setButtons(); renderArmyList(); return; }
     if (k === 'z' || k === 'Z') { doUndo(); return; }
     if (k === 'a' || k === 'A') { doAuto(); return; }
-    if (/^[qweQWE]$/.test(k) && !$('gov').classList.contains('hidden')) { doGovern({ q: 'recruit', w: 'develop', e: 'fortify' }[k.toLowerCase()]); return; }
+    if (/^[qweQWE]$/.test(k) && !$('gov').classList.contains('hidden') && $('gov').querySelector('[data-k]')) { doStationaryOrder({ q: 'recruit', w: 'develop', e: 'fortify' }[k.toLowerCase()]); return; }
     if (/^[1-9]$/.test(k)) { const i = Number(k) - 1; if (S.dice[i]) onDieClick(i, ev.shiftKey); }
   });
   // 遊ぶ画面の上に重なる窓（この間は背後のゲームを操作させない）
@@ -1731,7 +1794,12 @@
         });
         trayDice.forEach((d, i) => { const r = d.el.getBoundingClientRect(); out['die' + i] = [r.left + r.width / 2, r.top + r.height / 2]; });
         document.querySelectorAll('.clan').forEach(el => { const r = el.getBoundingClientRect(); out['clan_' + el.dataset.id] = [r.left + r.width / 2, r.top + r.height / 2]; });
-        document.querySelectorAll('#gov .gv').forEach(el => { if (el.disabled) return; const r = el.getBoundingClientRect(); out['gov_' + el.dataset.k] = [r.left + r.width / 2, r.top + r.height / 2]; });
+        document.querySelectorAll('#gov .gv').forEach(el => {
+          if (el.disabled) return;
+          const r = el.getBoundingClientRect();
+          const key = el.dataset.k ? 'gov_' + el.dataset.k : 'prepare_' + el.dataset.target;
+          out[key] = [r.left + r.width / 2, r.top + r.height / 2];
+        });
         return out;
       },
       state() { return S ? { turn: S.turn, cur: S.cur, phase: S.phase, over: S.over, maxTurn: S.maxTurn, offers: S.offers, dice: S.dice.map(d => d.v + (d.u ? 'u' : '')), mine: S.owner.filter(o => o === S.player).length, kok: E.kokOf(S, S.player), armies: S.armies.filter(a => a.c === S.player).map(a => ({ id: a.id, n: a.n, t: a.t, mv: a.mv, dg: !!a.dg })) } : null; },

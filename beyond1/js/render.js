@@ -367,7 +367,7 @@
       x.restore();
     }
     if (o.dom) {
-      const t = { recruit: '徴', develop: '開', fortify: '築' }[o.dom] || '内';
+      const t = { recruit: '徴', develop: '開', fortify: '築', prepare: '備' }[o.dom] || '内';
       x.beginPath(); x.arc(-r * 0.8, r * 0.62, 8, 0, Math.PI * 2); x.fillStyle = '#2f6b3a'; x.fill(); x.lineWidth = 1.3; x.strokeStyle = '#fbf6e8'; x.stroke();
       x.fillStyle = '#fbf6e8'; x.font = '700 10px ' + FONT_M; x.fillText(t, -r * 0.8, r * 0.62 + 0.5);
     }

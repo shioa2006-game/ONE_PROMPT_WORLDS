@@ -199,6 +199,41 @@
     return out.reverse();
   }
 
+  // 準備は軍勢・陣地・目標・城主に結び付く。従来の記録には siegePlan がない。
+  function siegePoints(s, army, target) {
+    const plan = army && army.siegePlan;
+    return plan && plan.target === target && plan.node === army.n && plan.clan === army.c &&
+      plan.owner === s.owner[target] && plan.owner !== army.c ? plan.points : 0;
+  }
+  function clearInvalidPlans(s) {
+    for (const a of s.armies) {
+      if (a.siegePlan && !siegePoints(s, a, a.siegePlan.target)) delete a.siegePlan;
+    }
+  }
+  function siegeOptions(s, a, i) {
+    const die = s.dice[i];
+    if (s.over || s.phase !== 'move' || !die || die.u || !a || a.mv ||
+        a.c !== s.cur || a.t < R.siegeMinArmy || nodes[a.n].kind !== 'b') return [];
+    const gain = die.v >= R.siegeHighDie ? R.siegeHighGain : R.siegeLowGain;
+    const options = [];
+    for (const target of adj[a.n]) {
+      if (!s.owner[target] || s.owner[target] === a.c) continue;
+      const before = siegePoints(s, a, target);
+      if (before < R.siegeMax) options.push({ target, before, after: Math.min(R.siegeMax, before + gain) });
+    }
+    return options;
+  }
+  function prepareSiege(s, armyId, i, target) {
+    const a = armyById(s, armyId);
+    const option = siegeOptions(s, a, i).find(o => o.target === target);
+    if (!option) return null;
+    a.siegePlan = { clan: a.c, node: a.n, owner: s.owner[target], target, points: option.after };
+    a.mv = true;
+    s.dice[i].u = true;
+    return [{ type: 'prepare', army: a.id, clan: a.c, v: s.dice[i].v, ...option },
+      { type: 'dice', used: [i], army: a.id }];
+  }
+
   // ───────── 合戦の見積もり ─────────
   function attackParts(s, army, t, left) {
     const c = army.c, kishu = left === 0;
@@ -209,6 +244,8 @@
     if (sup) parts.push(['加勢', sup * supVal(c)]);
     const tr = trait(c);
     if (tr === 'charge') parts.push(['軍神', 1]);
+    const prep = siegePoints(s, army, t);
+    if (prep) parts.push(['攻城準備', prep]);
     if (kishu && tr === 'ambush') parts.push(['野伏せ', 2]);
     if (tr === 'cannon' && nodes[t].kind === 'c') parts.push(['国崩し', 2]);
     return { parts, kishu, total: parts.reduce((x, p) => x + p[1], 0) };
@@ -375,6 +412,7 @@
       ev.push({ type: 'move', army: a.id, clan: a.c, path });
       a.n = target;
     } else return null;
+    delete a.siegePlan;
     ev.push({ type: 'dice', used: idxs.slice(), army: a.id });
     return ev;
   }
@@ -393,6 +431,8 @@
       att: { id: a.id, c, t0: a.t }, def: { id: da ? da.id : null, c: dc, t0: da ? da.t : 0, g0: castle ? s.gar[nd.p] : 0 },
       A: pv.A.parts, D: D.parts, SA, SDb: D.total, die, kishu: pv.kishu, p: pv.p, win: m > 0,
     };
+    const prep = siegePoints(s, a, t);
+    if (prep) b.prep = prep;
     const cs = s.clans[c];
     if (pv.kishu) cs.kishu++;
     if (m > 0) {
@@ -417,6 +457,7 @@
       if (castle) {
         const p = nd.p, old = s.owner[p];
         s.owner[p] = c; s.gar[p] = R.capGar;
+        clearInvalidPlans(s);
         // 戦火で荒れる
         if (s.kok[p] > BASEK[p]) s.kok[p]--;
         if (s.fort[p] > 0) s.fort[p]--;
@@ -446,6 +487,14 @@
     }
     b.att.t1 = a.t;
     b.def.t1 = da ? da.t : 0;
+    if (da && da.siegePlan && da.t < b.def.t0) {
+      const before = da.siegePlan.points;
+      const after = da.n === da.siegePlan.node && armyById(s, da.id) ? Math.max(0, before - R.siegeDisruption) : 0;
+      // 表示用スナップショットと共有されている可能性があるので、準備を新しい値で置き換える。
+      if (after) da.siegePlan = { ...da.siegePlan, points: after };
+      else delete da.siegePlan;
+      ev.push({ type: 'disrupt', army: da.id, before, after });
+    }
     b.def.g1 = castle ? s.gar[nd.p] : 0;
   }
   function retreatNode(s, da, t, from) {
@@ -484,6 +533,7 @@
     for (const a of s.armies) if (a.c === c) { a.c = to; a.mv = true; delete a.dom; delete a.dg; moved.push(a.id); }
     s.clans[c].alive = false; s.clans[c].fell = { turn: s.turn, by: to, sub: true };
     s.clans[to].sub++;
+    clearInvalidPlans(s);
     const n = provCount(s, to);
     if (n > s.clans[to].peak) s.clans[to].peak = n;
     ev.push({ type: 'submit', clan: c, to, provs, armies: moved });
@@ -663,6 +713,7 @@
     devCap, devNeed, fortNeed, recruitGain, governPreview, govern, setDelegate,
     beginClanTurn, spawnOptions, spawn, roll, canReroll, reroll, budgetOf, move, endClanTurn, advance,
     rankList, extend, conclude, acceptOffer, declineOffer, absorb,
+    siegePoints, siegeOptions, prepareSiege,
     healAmount, dateLabel, kanjiNum, SEASONS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = E;

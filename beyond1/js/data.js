@@ -315,6 +315,8 @@ shirakawa shimotsuke R; shirakawa hitachi P; shirakawa iwaki P; iwaki hitachi R;
     armyMax: 10,
     newArmy: 4,
     momentumCap: 6,
+    siegeMinArmy: 8, siegeMax: 6, siegeHighDie: 4,
+    siegeLowGain: 2, siegeHighGain: 3, siegeDisruption: 2,
     support: 2,
     passCost: 2, seaCost: 2, winterExtra: 1, snowExtra: 1,
     passDefense: 1,
