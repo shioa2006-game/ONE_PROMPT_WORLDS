@@ -345,7 +345,8 @@
     g.fillStyle = R.C.brass; g.fillRect(mid - 3, yT - 96, 6, 26); g.beginPath(); g.arc(mid, yT - 98, 7, 0, 7); g.fill();
     R.rr(g, x0 - 18, yT - 38, x1 - x0 + 36, 40, 8); g.fillStyle = '#3a2f46'; g.fill(); g.strokeStyle = R.C.brassD; g.lineWidth = 3; g.stroke();
     // 灯室
-    R.rr(g, x0 - 44, yT, x1 - x0 + 44, yB - yT, 12); g.fillStyle = '#080d20'; g.fill();
+    const framePadding = 50;
+    R.rr(g, x0 - framePadding, yT, x1 - x0 + 2 * framePadding, yB - yT, 12); g.fillStyle = '#080d20'; g.fill();
     g.lineWidth = 5; g.strokeStyle = R.C.brass; g.stroke();
     // 光源
     const sx = R.SRCX - 20;
