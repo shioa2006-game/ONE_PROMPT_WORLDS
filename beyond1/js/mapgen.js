@@ -1,15 +1,19 @@
 /* 戦国すごろく全国版 — 地図の生成
-   投影は proj.js。国の塗り分けは「最寄りの種点（ゆがみ付き）」によるラスタで作る。 */
+   geography.js の投影で陸と湖を描き、最寄りの種点による下塗りに共有国境を重ねる。 */
 (function (root) {
   'use strict';
   const SG = root.SG;
   const D = SG.DATA, E = SG.E, PJ = SG.PJ;
   const W = PJ.W, H = PJ.H;
-  const proj = PJ.proj, polyProj = PJ.polyProj;
+  // 地図定義を渡さずに生成する過去の比較用ページは元の図を使う。
+  const geography = SG.GEO;
+  const proj = geography ? geography.project : PJ.proj;
+  const polyProj = geography ? geography.outline : PJ.polyProj;
 
   // ───── ノード位置 ─────
   const POS = [];
-  D.PROV.forEach((p, i) => { POS[i] = proj(p.lat, p.lon); });
+  const castlePoint = geography?.castlePoint || (p => [p.lat,p.lon]);
+  D.PROV.forEach((p, i) => { POS[i] = proj(...castlePoint(p)); });
   // 国境の位置：まずは二つの城の中点（海路は手で補正）。陸の国境は build() で接する線の上へ置き直す
   const BORDER_NUDGE = {
     'boshu-sagami': [4, 10], 'higo-nishihizen': [-6, 8], 'aki-iyo': [0, 6],
@@ -21,6 +25,9 @@
     const nk = BORDER_NUDGE[nd.key];
     if (nk) { x += nk[0]; y += nk[1]; }
     POS[i] = [x, y];
+  }
+  if (geography) {
+    for (const [key, point] of Object.entries(geography.straits)) POS[E.nodeOf(key)] = proj(...point);
   }
 
   // ───── 乱数・ノイズ ─────
@@ -55,16 +62,24 @@
     RS = RS || 1.25;
     const MW = Math.round(W * RS), MH = Math.round(H * RS);
     const isl = {};
-    const islNames = Object.keys(D.COAST);
-    islNames.forEach(k => { isl[k] = polyProj(D.COAST[k]); });
-    const lakes = D.LAKES.map(l => polyProj(l));
+    const coast = geography ? geography.coastlines : D.COAST;
+    const islNames = Object.keys(coast);
+    const islandIds = Object.fromEntries(islNames.map((k,i) => [k,i+1]));
+    islNames.forEach(k => { isl[k] = polyProj(coast[k]); });
+    const lakes = (geography ? geography.lakes : D.LAKES).map(l => polyProj(l));
 
     // 陸地マスク（島ごとに番号を塗る）
     const mc = document.createElement('canvas'); mc.width = MW; mc.height = MH;
     const mx = mc.getContext('2d');
     mx.imageSmoothingEnabled = false;
+    // 半透明の岸では非乗算RGBに戻すと最大1ほど丸まる。島番号に間隔を空け、
+    // 四国の縁や小島の画素が本州など別の島の国として塗られるのを防ぐ。
+    // 既存28島の符号は固定し、増えた島は緑のチャンネルで区別する。
+    const islandStep = geography ? 9 : 1;
     islNames.forEach((k, i) => {
-      mx.fillStyle = 'rgb(' + (i + 1) + ',0,0)';
+      const red = geography ? (i % 28 + 1) * islandStep : i + 1;
+      const green = geography ? Math.floor(i / 28) * 80 : 0;
+      mx.fillStyle = 'rgb(' + red + ',' + green + ',0)';
       mx.beginPath();
       isl[k].forEach((p, j) => { if (j) mx.lineTo(p[0] * RS, p[1] * RS); else mx.moveTo(p[0] * RS, p[1] * RS); });
       mx.closePath(); mx.fill();
@@ -74,7 +89,7 @@
     const md = mx.getImageData(0, 0, MW, MH).data;
     const land = new Uint8Array(MW * MH);
     for (let i = 0; i < land.length; i++) {
-      const r = md[i * 4], a = md[i * 4 + 3];
+      const r = Math.round(md[i * 4] / islandStep) + 28 * Math.round(md[i * 4 + 1] / 80), a = md[i * 4 + 3];
       land[i] = a > 127 && r > 0 && r <= islNames.length ? r : 0;
     }
 
@@ -82,7 +97,7 @@
     const seeds = [];
     const islOf = (x, y) => { for (let i = 0; i < islNames.length; i++) if (pointInPoly(x, y, isl[islNames[i]])) return i + 1; return 0; };
     D.PROV.forEach((p, i) => {
-      const pts = [[p.lat, p.lon]].concat(p.x || []);
+      const pts = [castlePoint(p)].concat(p.x || []);
       pts.forEach(q => { const w = proj(q[0], q[1]); seeds.push({ x: w[0], y: w[1], id: i, isl: islOf(w[0], w[1]) || 1 }); });
     });
     D.OUTER.forEach((o, k) => {
@@ -93,6 +108,13 @@
     const nz1 = makeNoise(7, 70), nz2 = makeNoise(11, 70), nz3 = makeNoise(13, 22), nz4 = makeNoise(17, 22);
     const WARP = 14, WARP2 = 4;
     const idx = new Uint8Array(MW * MH).fill(255);
+    const islandProvince = {};
+    for (const [island,id] of Object.entries(geography?.islandProvince || {})) {
+      islandProvince[islandIds[island]] = E.PI[id];
+    }
+    for (const [island,parent] of Object.entries(geography?.outerIslands || {})) {
+      islandProvince[islandIds[island]] = 100 + D.OUTER.findIndex(o => o.isl === parent);
+    }
     const B = 16;
     const bySl = {};
     seeds.forEach(sd => { (bySl[sd.isl] = bySl[sd.isl] || []).push(sd); });
@@ -106,6 +128,7 @@
             const i = y * MW + x;
             const li = land[i];
             if (!li) continue;
+            if (islandProvince[li] !== undefined) { idx[i] = islandProvince[li]; continue; }
             let cand = cache[li];
             if (!cand) {
               const list = bySl[li] || seeds;
@@ -126,6 +149,8 @@
         }
       }
     }
+
+    if (geography) geography.paint(idx, land, MW, MH, RS, islandIds);
 
     // 国境のマスを、二国が実際に接している線の上（両城の中点にいちばん近い所）へ置く
     {
@@ -225,6 +250,21 @@
     return { RS, MW, MH, isl, lakes, land, idx, masks, borders: bc, seeds };
   }
 
-  const MAP = { W, H, proj, polyProj, POS, build, makeNoise, mul, pointInPoly };
+  const straight = [];
+  const between = geography ? geography.between : () => straight;
+  function routePosition(from, to, fraction) {
+    const points = [POS[from], ...between(from,to), POS[to]];
+    const lengths = points.slice(1).map(([x,y], i) => Math.hypot(x - points[i][0], y - points[i][1]));
+    let left = fraction * lengths.reduce((a,b) => a+b, 0);
+    for (let i=0; i<lengths.length; i++) {
+      if (left <= lengths[i] && lengths[i]) {
+        const a = points[i], b = points[i+1], t = left / lengths[i];
+        return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+      }
+      left -= lengths[i];
+    }
+    return POS[to];
+  }
+  const MAP = { W, H, proj, polyProj, POS, build, makeNoise, mul, pointInPoly, between, routePosition };
   root.SG.MAP = MAP;
 })(window);

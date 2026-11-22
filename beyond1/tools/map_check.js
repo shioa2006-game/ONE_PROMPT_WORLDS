@@ -3,6 +3,7 @@
 'use strict';
 const D = require('../js/data.js');
 const PJ = require('../js/proj.js');
+const geography = require('../js/geography.js');
 
 let bad = 0;
 const fail = m => { bad++; console.log('NG', m); };
@@ -56,7 +57,7 @@ console.log('大名', D.CLANS.length, '（主要', maj.length, '・その他', m
 console.log('主要大名の石高', maj.map(c => c.n + kokOf(c)).join(' '));
 
 // 投影後の間隔
-const pos = D.PROV.map(p => PJ.proj(p.lat, p.lon));
+const pos = D.PROV.map(p => geography.project(...geography.castlePoint(p)));
 let minC = Infinity, pair = null;
 for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) {
   const d = Math.hypot(pos[i][0] - pos[j][0], pos[i][1] - pos[j][1]);

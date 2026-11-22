@@ -139,9 +139,9 @@
     if (!mine && (!seen || (!near && speed.fast))) { a.n = end; return; }
     const stepMs = mine ? 170 : near ? 120 : 45;
     for (let i = 1; i < e.path.length; i++) {
-      const p0 = POS[e.path[i - 1]], p1 = POS[e.path[i]];
+      const p1 = POS[e.path[i]];
       await tween(stepMs, k => {
-        U.armyPos[a.id] = [p0[0] + (p1[0] - p0[0]) * k, p0[1] + (p1[1] - p0[1]) * k];
+        U.armyPos[a.id] = MAP.routePosition(e.path[i-1], e.path[i], k);
         U.hop[a.id] = Math.sin(k * Math.PI) * (mine ? 7 : 4);
       });
       if (mine || near) { A.S.step(i); fxPuff(p1[0], p1[1] + 10, 'rgba(140,115,80,1)', 4, 10); }
@@ -152,8 +152,7 @@
   async function animStep(id, from, to, ms) {
     const a = vArmy(id); if (!a) return;
     if (!ms) { a.n = to; return; }
-    const p0 = POS[from], p1 = POS[to];
-    await tween(ms, k => { U.armyPos[id] = [p0[0] + (p1[0] - p0[0]) * k, p0[1] + (p1[1] - p0[1]) * k]; });
+    await tween(ms, k => { U.armyPos[id] = MAP.routePosition(from, to, k); });
     a.n = to; delete U.armyPos[id];
   }
 
@@ -1418,7 +1417,10 @@
 
   // ───────── 入力 ─────────
   const cv = $('map');
-  function hitAt(ev, extra) { return R.hitTest(ev.clientX, ev.clientY, V || BG, { extra }); }
+  function hitAt(ev, extra) {
+    // 出陣先の国境マスが隣の駒の当たり判定に入っても、そのマスを選べるようにする。
+    return R.hitTest(ev.clientX, ev.clientY, V || BG, { extra, preferArmy: S?.phase !== 'place' });
+  }
   function hlSet() {
     const s = new Set();
     if (curReach) { curReach.moves.forEach(n => s.add(n)); (U.targets || []).forEach(t => s.add(t.n)); }
@@ -1534,7 +1536,7 @@
   // 地図の拡大（ホイール）と移動（ドラッグ）
   let drag = null, dragged = false;
   cv.addEventListener('wheel', ev => {
-    if (mode !== 'play' && mode !== 'view' && mode !== 'select') return;
+    if (mode !== 'play' && mode !== 'view' && mode !== 'select' && mode !== 'atlas') return;
     ev.preventDefault();
     R.zoomAt(ev.clientX, ev.clientY, ev.deltaY < 0 ? 1.15 : 1 / 1.15);
   }, { passive: false });
@@ -1598,6 +1600,11 @@
   cv.addEventListener('contextmenu', ev => { ev.preventDefault(); if (mode === 'play' && !busy) { clearSel(); enterMovePromptOnly(); setButtons(); renderArmyList(); } });
 
   root.addEventListener('keydown', ev => {
+    if (mode === 'atlas') {
+      if (ev.key === 'Escape') toTitle();
+      if (ev.key === '0') R.resetView();
+      return;
+    }
     if (!$('offer').classList.contains('hidden')) {
       if (ev.key === 'Enter' || ev.key === 'y') answerOffer(true);
       else if (ev.key === 'Escape' || ev.key === 'n') answerOffer(false);
@@ -1683,13 +1690,25 @@
   function closeHelp() { show('help', false); }
 
   // 地方へ移動
-  $('navi').innerHTML = '<button data-r="all" title="全国（0）">全国</button><button data-r="home" title="自分の領地へ（H）">自領</button>' + D.REGIONS.map(r => '<button data-r="' + r.id + '">' + r.n.replace('・甲信', '') + '</button>').join('') + '<canvas id="minimap" width="210" height="207"></canvas>';
+  function regionView(region) {
+    const areas = D.PROV.flatMap((p,i) =>
+      (region === 'setouchi' ? p.r === 'chugoku' || p.r === 'shikoku' : p.r === region) ? [R.M.masks[i]] : []);
+    const rs = R.M.RS, compact = innerWidth < 900, atlas = mode === 'atlas';
+    const padR = compact ? 12 : $('navi').getBoundingClientRect().width + 30;
+    R.fitBox(Math.min(...areas.map(m=>m.x0))/rs-8, Math.min(...areas.map(m=>m.y0))/rs-8,
+      Math.max(...areas.map(m=>m.x1))/rs+8, Math.max(...areas.map(m=>m.y1))/rs+8, 420,
+      {padL:atlas || compact ? 12 : 320, padR, padT:compact ? 110 : 26, padB:atlas ? 22 : 180, maxS:2.4});
+  }
+  $('navi').innerHTML = '<button data-r="all" title="全国（0）">全国</button><button data-r="home" title="自分の領地へ（H）">自領</button><button data-r="setouchi" title="中国・四国を両岸から見る">瀬戸内</button>' +
+    D.REGIONS.map(r => '<button data-r="' + r.id + '">' + r.n.replace('・甲信', '') + '</button>').join('') +
+    '<button data-r="title">タイトルへ</button><canvas id="minimap" width="210" height="207"></canvas>';
   $('navi').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const r = b.dataset.r;
     A.ensure(); A.S.click();
     if (r === 'all') R.resetView();
     else if (r === 'home') homeView();
-    else fitProvs(D.PROV.map((p, i) => (p.r === r ? i : -1)).filter(i => i >= 0), 500, 1.3);
+    else if (r === 'title') toTitle();
+    else regionView(r);
   }));
   const mm = $('minimap');
   const mmJump = ev => {
@@ -1701,6 +1720,7 @@
 
   // タイトル・大名選び
   function toTitle() {
+    document.body.classList.remove('atlas');
     mode = 'title';
     showPlayUI(false);
     ['select', 'result', 'menu', 'help', 'decide', 'offer', 'slots'].forEach(id => show(id, false));
@@ -1712,6 +1732,12 @@
     R.resetView(400);
   }
   $('b-new').addEventListener('click', () => { A.ensure(); A.S.click(); openSelect(); });
+  $('b-atlas').addEventListener('click', () => {
+    mode = 'atlas';
+    show('title', false); show('navi', true);
+    document.body.classList.add('atlas');
+    R.resetView(0);
+  });
   $('b-cont').addEventListener('click', () => { A.ensure(); if (!loadGame()) $('b-cont').disabled = true; });
   $('b-load').addEventListener('click', () => { A.ensure(); openSlots(false); });
   $('b-howto').addEventListener('click', () => { A.ensure(); openHelp(); });
@@ -1766,7 +1792,7 @@
       U.winter = E.isWinter(st);
       const uu = (mode === 'play' || mode === 'view') ? U : { flash: mode === 'select' ? U.flash : null, fx: [], spread: {}, me: null };
       R.draw(st, uu, t);
-      if (mode === 'play' || mode === 'view') R.drawMini(mm, st, S ? S.player : null);
+      if (mode === 'play' || mode === 'view' || mode === 'atlas') R.drawMini(mm, st, S ? S.player : null);
     }
     placeGov();
     requestAnimationFrame(frame);

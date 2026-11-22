@@ -103,7 +103,10 @@
     const rnd = MAP.mul(4242);
     const glyphs = [];
     const roadSegs = [];
-    for (let i = E.P; i < E.N; i++) { const nd = E.nodes[i]; roadSegs.push([POS[nd.a], POS[i]], [POS[i], POS[nd.b]]); }
+    for (const nd of E.nodes.slice(E.P)) {
+      const path = [POS[nd.a], ...MAP.between(nd.a,nd.i), POS[nd.i], ...MAP.between(nd.i,nd.b), POS[nd.b]];
+      for (let i=1; i<path.length; i++) roadSegs.push([path[i-1],path[i]]);
+    }
     const segDist = (px, py, a, b) => {
       const dx = b[0] - a[0], dy = b[1] - a[1];
       const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / (dx * dx + dy * dy || 1)));
@@ -181,7 +184,11 @@
     for (let i = E.P; i < E.N; i++) {
       const nd = E.nodes[i];
       const a = POS[nd.a], m = POS[i], b = POS[nd.b];
-      x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(m[0], m[1]); x.lineTo(b[0], b[1]);
+      x.beginPath(); x.moveTo(...a);
+      for (const p of MAP.between(nd.a,i)) x.lineTo(...p);
+      x.lineTo(...m);
+      for (const p of MAP.between(i,nd.b)) x.lineTo(...p);
+      x.lineTo(...b);
       if (nd.t === 'S') { x.setLineDash([2, 5]); x.strokeStyle = 'rgba(235,240,230,0.85)'; x.lineWidth = 2; }
       else if (nd.t === 'P') { x.setLineDash([6, 4]); x.strokeStyle = COL.road; x.lineWidth = 1.8; }
       else { x.setLineDash([]); x.strokeStyle = COL.road; x.lineWidth = 2; }
@@ -243,7 +250,7 @@
   // ───── 視点：fit（全体が収まる倍率）× z、中心 (cx, cy) は世界座標 ─────
   let zoom = { z: 1, cx: W / 2, cy: H / 2 };
   let cam = null;
-  const ZMAX = 4.6;
+  const maxZoom = () => Math.max(4.6, 2.4 / fitScale());
   function fitScale() { return Math.min(root.innerWidth / W, root.innerHeight / H); }
   function applyView() {
     const w = root.innerWidth, h = root.innerHeight;
@@ -265,7 +272,7 @@
   function zoomAt(sx, sy, f) {
     cam = null;
     const [wx, wy] = toWorld(sx, sy);
-    const nz = Math.max(1, Math.min(ZMAX, zoom.z * f));
+    const nz = Math.max(1, Math.min(maxZoom(), zoom.z * f));
     if (nz === zoom.z) return;
     const w = root.innerWidth, h = root.innerHeight;
     const s = fitScale() * nz;
@@ -277,7 +284,7 @@
   function resetView(ms) { flyTo(W / 2, H / 2, 1, ms == null ? 450 : ms); }
   const ease = k => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
   function flyTo(cx, cy, z, ms) {
-    z = Math.max(1, Math.min(ZMAX, z == null ? zoom.z : z));
+    z = Math.max(1, Math.min(maxZoom(), z == null ? zoom.z : z));
     if (!ms) { cam = null; zoom = { z, cx, cy }; applyView(); return; }
     cam = { from: Object.assign({}, zoom), to: { z, cx, cy }, t0: performance.now(), dur: ms };
   }
@@ -290,7 +297,7 @@
     if (opt.maxS) s = Math.min(s, opt.maxS);
     if (opt.minS) s = Math.max(s, opt.minS);
     const z = s / fitScale();
-    const sc = fitScale() * Math.max(1, Math.min(ZMAX, z));
+    const sc = fitScale() * Math.max(1, Math.min(maxZoom(), z));
     // 余白のぶん中心をずらす
     const cx = (x0 + x1) / 2 - ((opt.padL || 0) - (opt.padR || 0)) / 2 / sc;
     const cy = (y0 + y1) / 2 - ((opt.padT || 0) - (opt.padB || 0)) / 2 / sc;
@@ -586,11 +593,13 @@
       for (let p = 0; p < E.P; p++) {
         const q = SP[p];
         if (!vis(q, 40)) continue;
-        const ly = q[1] + 27 * g, hw = D.PROV[p].n.length * fs * 0.52;
+        const kyoto = p === E.KYO;
+        const lx = q[0] + (kyoto ? 24 * g : 0);
+        const ly = q[1] + (kyoto ? 19 : 27) * g, hw = D.PROV[p].n.length * fs * 0.52;
         let hit = false;
-        for (const t of tokens) { if (t[3] <= 0.05) continue; if (Math.abs(t[0] - q[0]) < hw + tr && Math.abs(t[1] - ly) < fs * 0.5 + tr && !(t[0] === q[0] && t[1] === q[1])) { hit = true; break; } }
+        for (const t of tokens) { if (t[3] <= 0.05) continue; if (Math.abs(t[0] - lx) < hw + tr && Math.abs(t[1] - ly) < fs * 0.5 + tr && !(t[0] === q[0] && t[1] === q[1])) { hit = true; break; } }
         if (hit) x.globalAlpha = 0.38;
-        label(x, D.PROV[p].n, q[0], ly, '700 ' + fs + 'px ' + FONT_M, '#2a1d10', 'rgba(244,236,214,0.92)');
+        label(x, D.PROV[p].n, lx, ly, '700 ' + fs + 'px ' + FONT_M, '#2a1d10', 'rgba(244,236,214,0.92)');
         x.globalAlpha = 1;
       }
     }
@@ -651,7 +660,12 @@
       x.save();
       x.lineCap = 'round'; x.lineJoin = 'round';
       x.beginPath();
-      U.path.forEach((n, i) => { const p = SP[n]; if (i) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); });
+      U.path.forEach((n, i) => {
+        const p = SP[n];
+        if (!i) { x.moveTo(...p); return; }
+        for (const [wx,wy] of MAP.between(U.path[i-1],n)) x.lineTo(p[0]+(wx-POS[n][0])*view.s,p[1]+(wy-POS[n][1])*view.s);
+        x.lineTo(...p);
+      });
       x.strokeStyle = 'rgba(30,20,10,0.55)'; x.lineWidth = 7; x.stroke();
       x.setLineDash([8, 6]); x.lineDashOffset = -t * 30;
       x.strokeStyle = U.pathAttack ? '#ff6b4a' : '#ffd760'; x.lineWidth = 3.5; x.stroke();
