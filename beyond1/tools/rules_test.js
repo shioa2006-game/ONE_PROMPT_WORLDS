@@ -275,6 +275,33 @@ function dice(s, vals) { s.dice = vals.map(v => ({ v, u: false })); s.phase = 'm
   R.subChance = save.c;
 }
 
+// 手番開始後の臣従で出陣枠が埋まる場合と、石高増加で新しく空く場合。
+{
+  const s = blank('oda', {});
+  s.owner = s.owner.map((_, p) => p < 65 ? 'oda' : p < 68 ? 'hojo' : 'kasai');
+  s.kok[0] = E.devCap(0);
+  for (let n = 0; n < 23; n++) s.armies.push({ id: s.aid++, c: 'oda', n, t: 10, mv: false });
+  for (const n of E.provsOf(s, 'hojo')) s.armies.push({ id: s.aid++, c: 'hojo', n, t: 10, mv: false });
+  s.offers = [{ c: 'hojo', turn: s.turn }];
+  E.beginClanTurn(s);
+  ok(s.phase === 'place', '臣従前は23/24で出陣できる');
+  for (const count of [23, 24, 26]) {
+    const t = E.clone(s);
+    t.armies = t.armies.filter(a => a.c === 'oda' || a.n < 65 + count - 23);
+    E.acceptOffer(t, 'hojo');
+    ok(E.armiesOf(t, 'oda').length === count && E.slots(t, 'oda') === 24, '加入した全軍を維持');
+    ok(t.phase === (count < 24 ? 'place' : 'roll'), '臣従後' + count + '/24の出陣判定');
+    ok(t.armies.filter(a => a.n >= 65).every(a => a.mv), '加入した軍勢は行動済み');
+  }
+  const t = blank('oda', { owari: 'oda', mino: 'hojo' });
+  army(t, 'oda', 'owari', 10); army(t, 'oda', 'owari-mino', 10);
+  t.offers = [{ c: 'hojo', turn: t.turn }];
+  E.beginClanTurn(t);
+  ok(t.phase === 'roll', '臣従前は2/2で出陣不可');
+  E.acceptOffer(t, 'hojo');
+  ok(t.phase === 'place' && E.spawnOptions(t, 'oda').length > 0, '石高増加で新しい出陣枠が空く');
+}
+
 // 13. 区切り：プレイヤーがいれば決断待ち、延長で続き、決着で順位
 {
   const s = E.newGame('oda', 9, { maxTurn: 2 });
@@ -341,6 +368,83 @@ function dice(s, vals) { s.dice = vals.map(v => ({ v, u: false })); s.phase = 'm
   ok(s.owner.every(o => o && s.clans[o].alive), 'owners are alive clans');
   ok(s.armies.every(a => s.clans[a.c].alive), 'armies belong to alive clans');
   ok(s.armies.every((a, i) => s.armies.findIndex(b => b.n === a.n) === i), 'no two armies on one node');
+}
+
+// 18. 全大名の軍勢に同じ条件を適用し、準備データのない旧形式からも命令できる。
+for (const clan of E.CLAN_IDS) {
+  const other = clan === 'hojo' ? 'oda' : 'hojo';
+  const s = blank(clan, { owari: clan, mino: other });
+  const a = army(s, clan, 'owari-mino', 7);
+  const target = P('mino');
+  dice(s, [3, 4]);
+  ok(!E.prepareSiege(s, a.id, 0, target), clan + ' 兵7では準備不可');
+  a.t = 8;
+  const old = JSON.stringify(s);
+  ok(!E.prepareSiege(s, a.id, 0, P('owari')) && JSON.stringify(s) === old, clan + ' 無効な命令は消費なし');
+  ok(E.prepareSiege(s, a.id, 0, target)[0].after === 2 && a.mv && s.dice[0].u, clan + ' 出目3で2点');
+  ok(!E.prepareSiege(s, a.id, 1, target), clan + ' 1季1命令');
+  for (const value of [5, 6]) {
+    E.endClanTurn(s); E.beginClanTurn(s); dice(s, [4]);
+    ok(E.prepareSiege(s, a.id, 0, target)[0].after === value, clan + ' 出目4で3点、上限6');
+  }
+  const copy = E.clone(s), actor = E.armyById(copy, a.id);
+  E.beginClanTurn(copy); dice(copy, [1]);
+  ok(!E.prepareSiege(copy, a.id, 0, target) && !copy.dice[0].u, clan + ' 満了時は消費なし');
+  actor.t = 6;
+  const forecast = E.preview(copy, actor, target, 0);
+  const b = E.move(copy, a.id, [0], target).find(e => e.type === 'battle');
+  ok(b.prep === 6 && b.SA === forecast.A.total && b.p === forecast.p && !actor.siegePlan, clan + ' 保存後・負傷後も攻城で使い切る');
+}
+
+// 迎撃・撤兵・臣従・目標変更のあとに準備が復活しない。
+{
+  const s = blank('oda', { owari: 'oda', mino: 'hojo' });
+  const a = army(s, 'oda', 'owari-mino', 10), d = army(s, 'hojo', 'mino', 10);
+  dice(s, [4]); E.prepareSiege(s, a.id, 0, P('mino'));
+  const prepared = E.clone(s);
+  const failed = E.clone(s), weak = E.armyById(failed, a.id);
+  weak.t = 2;
+  E.beginClanTurn(failed); dice(failed, [1]);
+  const loss = E.move(failed, a.id, [0], P('mino')).find(e => e.type === 'battle');
+  ok(!loss.win && loss.prep === 3 && !weak.siegePlan, '攻城に敗れても準備は消費');
+  const harmless = E.clone(s); harmless.cur = 'hojo'; dice(harmless, [1]);
+  E.armyById(harmless, d.id).t = 1;
+  E.move(harmless, d.id, [0], a.n);
+  ok(E.siegePoints(harmless, E.armyById(harmless, a.id), P('mino')) === 3, '迎撃で兵に実損がなければ維持');
+  const capture = E.clone(s);
+  capture.armies = capture.armies.filter(unit => unit.id !== d.id);
+  const ally = army(capture, 'oda', 'mino-hida', 10);
+  capture.gar[P('mino')] = 1;
+  dice(capture, [1]);
+  const victory = E.move(capture, ally.id, [0], P('mino'));
+  ok(victory.some(e => e.type === 'capture') && !E.armyById(capture, a.id).siegePlan, '別働隊が城を取れば元の準備も消える');
+  s.cur = 'hojo'; dice(s, [1]);
+  const ev = E.move(s, d.id, [0], a.n);
+  ok(ev.some(e => e.type === 'disrupt' && e.before === 3 && e.after === 1), '迎撃で兵を削ると準備が2減る');
+  const retreat = E.clone(prepared); retreat.cur = 'hojo'; dice(retreat, [6, 6]);
+  ok(E.move(retreat, d.id, [0, 1], a.n).some(e => e.type === 'retreat') && !E.armyById(retreat, a.id).siegePlan, '退却で準備解除');
+  for (const c of ['oda', 'hojo']) {
+    const sub = E.clone(prepared); E.absorb(sub, c, 'mori', []);
+    ok(!E.armyById(sub, a.id).siegePlan, '臣従で軍または城主が変われば解除');
+  }
+  E.beginClanTurn(prepared); dice(prepared, [4]);
+  const other = E.clone(prepared); other.owner[P('owari')] = 'mori';
+  ok(E.prepareSiege(other, a.id, 0, P('owari'))[0].after === 3 && E.siegePoints(other, E.armyById(other, a.id), P('mino')) === 0, '目標変更は0から準備');
+  ok(E.move(prepared, a.id, [0], P('owari')) && !E.armyById(prepared, a.id).siegePlan, '移動で準備解除');
+}
+
+// 固い城に隣接し小さい賽が残ったとき、主要・小大名双方のCPUと委任の判断を通す。
+for (const clan of ['oda', 'kono']) {
+  const s = E.newGame(clan, 1); s.armies = [];
+  s.owner[P('owari')] = clan; s.owner[P('mino')] = 'hojo';
+  const a = army(s, clan, 'owari-mino', 10);
+  army(s, 'hojo', 'mino', 10);
+  dice(s, [1]);
+  const cpu = E.clone(s);
+  ok(AI.playTurn(cpu).some(e => e.type === 'prepare' && e.after === 2), clan + ' CPUの手番で準備');
+  ok(!AI.playFor(s, unit => unit.dg).length && !s.dice[0].u, '委任外は賽を使わない');
+  E.setDelegate(s, a.id, true);
+  ok(AI.playFor(s, unit => unit.dg).some(e => e.type === 'prepare'), clan + ' 委任軍が準備');
 }
 
 console.log('pass', pass, 'fail', fail);

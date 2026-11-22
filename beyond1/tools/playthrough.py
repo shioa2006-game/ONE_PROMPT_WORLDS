@@ -221,7 +221,9 @@ with sync_playwright() as p:
             else:
                 click(js('SGT.debug.nodeScreen(SGT.S.armies.find(x => x.id === %d).n)' % sg['army']))
             pg.wait_for_timeout(80)
-            if sg['kind'] == 'govern':
+            if sg['kind'] == 'prepare':
+                pg.locator('#gov .gv[data-target="%d"]' % sg['target']).click()
+            elif sg['kind'] == 'govern':
                 gb = btn('gov_' + sg['gov'])
                 if not gb:
                     P('  ! gov button missing', sg)
