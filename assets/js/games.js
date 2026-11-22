@@ -242,5 +242,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-22',
     accent: '#b48cff'
+  },
+  {
+    title: 'ずらり、砦くずし',
+    subtitle: '詠唱盤と黒鉄の街道',
+    genre: 'リール詠唱・砦攻め',
+    description: '魔王軍が 街道に 黒鉄の砦を 建てた。言葉を刻んだ リールを回すと、止まった横一行が そのまま 呪文になり、三本の道へ 飛んでいく。▲▼で 一コマずらせば 言葉が 隣の行へ 移り、呪文の形と 行き先が 変わる。救った人々に もらった言葉で 自分の詠唱盤を 組んで育て、砦を まとめて 崩していく。',
+    path: 'game17/index.html',
+    thumbnail: 'assets/thumbs/zurari-toridekuzushi.webp',
+    thumbnailSmall: 'assets/thumbs/zurari-toridekuzushi-640.webp',
+    thumbnailAlt: '「ずらり、砦くずし」のプレイ画面。風の丘で、源・形・力の リールが ならぶ 詠唱盤。▼で 2本のリールを ずらすと、上の道へ「炎・貫く・二倍・二度」の 呪文が 向かい、その先の 砦に「崩れる！」の 見こみが 出ている。下の道は 砦が 崩れて 青い旗が 立ち、村人が 歩いている。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-23',
+    accent: '#f0a848'
   }
 ];
