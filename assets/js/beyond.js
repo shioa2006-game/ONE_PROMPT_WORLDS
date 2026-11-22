@@ -62,7 +62,7 @@ window.OPW_BEYOND = [
     changelog: 'https://github.com/shioa2006-game/ONE_PROMPT_WORLDS/blob/main/beyond1/CHANGELOG.md',
     thumbnail: 'assets/thumbs/beyond1.webp',
     thumbnailSmall: 'assets/thumbs/beyond1-640.webp',
-    thumbnailAlt: '「賽駆け 天下」のプレイ画面。大名ごとに 色分けされた 四国から奥羽までの 日本地図で、北条家の軍勢が 進める マスが 水色に光り、武田軍との 合戦の 勝つ見込み 83% と、駿府城での 内政（徴兵・開墾・築城）の 小窓が 表示されている。右下には 振った4つの サイコロ。',
+    thumbnailAlt: '瀬戸内海を挟んで中国・四国の城と軍勢が並ぶ。毛利家が安芸の軍勢に二つの賽を割り当て、進軍できるマスが水色に光っている。',
     controls: 'マウス',
     ai: 'Claude Opus 5.5',
     accent: '#e3b955'
