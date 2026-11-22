@@ -7,6 +7,9 @@
   const POS = MAP.POS;
   const SAVE_KEY = 'saigakeT_save', SLOT_KEY = 'saigakeT_slot', TUT_KEY = 'saigakeT_tut';
   const PN = p => D.PROV[p].n;
+  const numberJa = new Intl.NumberFormat('ja-JP');
+  const manGoku = k => numberJa.format(k * 10);
+  const kokLabel = k => manGoku(k) + '万石';
   const GOV = { recruit: '徴兵', develop: '開墾', fortify: '築城', prepare: '攻城準備' };
 
   let S = null, V = null, BG = null;
@@ -322,7 +325,7 @@
     if (e.kind === 'recruit') { A.S.recruit(); fxText(q[0], q[1] - 30, '徴兵　兵+' + e.o.gain, '#7a1a10', 16); }
     if (e.kind === 'develop') {
       A.S.develop(e.o.up > 0);
-      if (e.o.up) { fxStamp(q[0], q[1], '石高+' + e.o.up, '#2f6b3a'); addLog(PN(e.prov) + 'の石高が' + e.o.kok1 + 'に', 'me', e.clan); }
+      if (e.o.up) { fxStamp(q[0], q[1], '石高+' + kokLabel(e.o.up), '#2f6b3a'); addLog(PN(e.prov) + 'の石高が' + kokLabel(e.o.kok1) + 'に', 'me', e.clan); }
       else fxText(q[0], q[1] - 30, '開墾 ' + e.o.kp1 + '/' + E.devNeed(S, e.prov), '#2f6b3a', 15);
     }
     if (e.kind === 'fortify') {
@@ -520,7 +523,7 @@
     const n = V.owner.filter(o => o === S.player).length;
     const rk = rankOf(S.player);
     $('st-prov').textContent = n;
-    $('st-kok').textContent = rk.k[S.player] || 0;
+    $('st-kok').textContent = manGoku(rk.k[S.player] || 0);
     $('st-rank').textContent = rk.rank > 0 ? rk.rank + '位' : '';
     const kyo = V.owner[E.KYO] === S.player;
     $('st-prov-box').classList.toggle('kyo', kyo);
@@ -544,10 +547,10 @@
     // 勢力図（石高の上位）
     const cn = E.counts(V);
     const order = rk.list;
-    $('powerbar').innerHTML = order.map(c => '<div title="' + CL[c].n + ' 石高' + rk.k[c] + '" style="flex-grow:' + rk.k[c] + ';background:' + CL[c].col + (c === S.player ? ';box-shadow:inset 0 0 0 2px #ffe9a8' : '') + '"></div>').join('');
+    $('powerbar').innerHTML = order.map(c => '<div title="' + CL[c].n + ' 石高' + kokLabel(rk.k[c]) + '" style="flex-grow:' + rk.k[c] + ';background:' + CL[c].col + (c === S.player ? ';box-shadow:inset 0 0 0 2px #ffe9a8' : '') + '"></div>').join('');
     const top = order.slice(0, 8);
     if (!top.includes(S.player) && rk.rank > 0) top.push(S.player);
-    $('powerlist').innerHTML = top.map(c => '<div class="row' + (c === S.player ? ' me' : '') + (CL[c].major ? '' : ' minor') + '" data-c="' + c + '"><span class="rk">' + (order.indexOf(c) + 1) + '</span><span class="sw" style="background:' + CL[c].col + '"></span>' + CL[c].n + (V.owner[E.KYO] === c ? '<small style="color:#ff8b78">京</small>' : '') + '<span class="n">' + rk.k[c] + '<small>石</small> ' + cn[c] + '<small>国</small></span></div>').join('');
+    $('powerlist').innerHTML = top.map(c => '<div class="row' + (c === S.player ? ' me' : '') + (CL[c].major ? '' : ' minor') + '" data-c="' + c + '"><span class="rk">' + (order.indexOf(c) + 1) + '</span><span class="sw" style="background:' + CL[c].col + '"></span>' + CL[c].n + (V.owner[E.KYO] === c ? '<small style="color:#ff8b78">京</small>' : '') + '<span class="n">' + manGoku(rk.k[c]) + '<small>万石</small> ' + cn[c] + '<small>国</small></span></div>').join('');
     $('power-n').textContent = '残る大名 ' + order.length + '家';
     $('powerlist').querySelectorAll('.row').forEach(el => el.addEventListener('click', () => flashClan(el.dataset.c)));
     $('coal').textContent = V.coal ? '⚑ ' + CL[V.coal].n + '包囲網' + (V.coal === S.player ? '（あなたが狙われている）' : '') : '';
@@ -641,7 +644,7 @@
     if (!o) return null;
     const d = E.dateLabel(o.turn);
     const k = E.kokOf(o, o.player);
-    return { txt: CL[o.player].n + '家　' + d.era + d.season + '　石高' + k + '　' + E.provCount(o, o.player) + 'か国', when: o.savedAt || '' };
+    return { txt: CL[o.player].n + '家　' + d.era + d.season + '　石高' + kokLabel(k) + '　' + E.provCount(o, o.player) + 'か国', when: o.savedAt || '' };
   }
   function openSlots(forSave) {
     const box = $('slot-list');
@@ -718,6 +721,10 @@
       ['title', 'select', 'result', 'menu', 'help', 'slots'].forEach(id => show(id, false));
       showPlayUI(true);
       try { logs = JSON.parse(localStorage.getItem((key || SAVE_KEY) + '_log')) || []; } catch (e) { logs = []; }
+      // 旧記録の開墾ログは内部値で保存されている。すでに万石表記の行は対象外。
+      for (const entry of logs) {
+        entry.txt = entry.txt.replace(/の石高が(\d+)に$/, (_, k) => 'の石高が' + kokLabel(Number(k)) + 'に');
+      }
       renderLog();
       addLog('つづきから再開', 'me', S.player);
       if (key && key !== SAVE_KEY) save();
@@ -770,7 +777,7 @@
       const k = E.kokOf(S, o.c);
       const na = S.armies.filter(a => a.c === o.c).length;
       $('offer-body').innerHTML = '<span class="mon" style="background:' + c.col + ';width:56px;height:56px;font-size:30px">' + c.mon + '</span><div class="txt"><b>' + c.n + '家（' + c.who + '）が臣従を申し出ている</b><br>' +
-        ps.map(PN).join('・') + '（石高' + k + '）と軍勢' + na + 'がそのまま手に入る。<br><span class="k">断ると、しばらく申し出はない。</span></div>';
+        ps.map(PN).join('・') + '（石高' + kokLabel(k) + '）と軍勢' + na + 'がそのまま手に入る。<br><span class="k">断ると、しばらく申し出はない。</span></div>';
       show('offer', true);
       A.S.horn();
       const yes = await new Promise(res => { offerAnswer = res; });
@@ -811,6 +818,7 @@
     newsTimer = setTimeout(() => n.classList.add('hidden'), 8000);
   }
   function resumePlayerTurn() {
+    if (S.over) return;
     $('cpuchip').classList.add('hidden');
     hud(); computeDanger();
     clearSel();
@@ -825,6 +833,13 @@
   }
   function enterPlace() {
     const opts = E.spawnOptions(S, S.player);
+    if (!opts.length) {
+      // 以前の記録に、臣従前の出陣待ちが残っている場合。
+      E.spawn(S, null);
+      U.nodeHL = null;
+      save();
+      return enterRoll();
+    }
     U.nodeHL = {};
     opts.forEach(n => { U.nodeHL[n] = 'rgba(255,215,100,0.55)'; });
     const outside = opts.some(n => n >= E.P);
@@ -1069,9 +1084,9 @@
   function govText(kind, o) {
     if (kind === 'recruit') return o.ok ? '兵 ' + o.from + '→<b>' + o.to + '</b>' : o.why;
     if (kind === 'develop') {
-      if (!o.ok) return '石高 ' + o.kok + '（' + o.why + '）';
-      if (o.up) return '石高 ' + o.kok + '→<b>' + o.kok1 + '</b>！';
-      return '開墾 ' + o.cur + '→<b>' + o.kp1 + '</b>/' + o.need + '　（石高' + o.kok + '）';
+      if (!o.ok) return '石高 ' + kokLabel(o.kok) + '（' + o.why + '）';
+      if (o.up) return '石高 ' + kokLabel(o.kok) + ' → <b>' + kokLabel(o.kok1) + '</b>！';
+      return '開墾 ' + o.cur + '→<b>' + o.kp1 + '</b>/' + o.need + '　（石高' + kokLabel(o.kok) + '）';
     }
     if (kind === 'fortify') {
       if (!o.ok) return o.why;
@@ -1313,7 +1328,7 @@
     const pi = rk.findIndex(r => r.c === S.player);
     const rows = rk.slice(0, limit).map((r, i) => ({ r, i }));
     if (pi >= limit) rows.push({ r: rk[pi], i: pi });
-    return '<table class="rank">' + rows.map(({ r, i }) => '<tr class="' + (r.c === S.player ? 'me' : '') + '"><td>' + (i + 1) + '</td><td><span class="sw" style="background:' + CL[r.c].col + '"></span>' + CL[r.c].n + '</td><td>石高 ' + r.k + '</td><td>' + r.n + 'か国</td></tr>').join('') + '</table>';
+    return '<table class="rank">' + rows.map(({ r, i }) => '<tr class="' + (r.c === S.player ? 'me' : '') + '"><td>' + (i + 1) + '</td><td><span class="sw" style="background:' + CL[r.c].col + '"></span>' + CL[r.c].n + '</td><td>石高 ' + kokLabel(r.k) + '</td><td>' + r.n + 'か国</td></tr>').join('') + '</table>';
   }
   function askDecide() {
     mode = 'play';
@@ -1360,13 +1375,13 @@
     let big, txt, cls;
     if (o.reason === 'unify' && o.kind === 'win') { big = '天下統一'; cls = 'win'; txt = me.who + '、日本六十余州をことごとく従える。' + end.era + '、戦国の世はあなたの采配で終わった。'; A.S.big(); }
     else if (o.reason === 'unify') { big = '天下は' + CL[o.clan].n + 'へ'; cls = 'lose'; txt = CL[o.clan].who + 'が全国を平らげた。'; A.S.lose(); }
-    else if (o.kind === 'top') { big = '天下第一の大名'; cls = 'win'; txt = end.era + '、' + me.n + '家は石高' + k + '・' + n + 'か国。諸大名の中で最も大きい。'; A.S.win(); }
+    else if (o.kind === 'top') { big = '天下第一の大名'; cls = 'win'; txt = end.era + '、' + me.n + '家は石高' + kokLabel(k) + '・' + n + 'か国。諸大名の中で最も大きい。'; A.S.win(); }
     else if (o.reason === 'fall') { big = me.n + '家 滅亡'; cls = 'lose'; txt = 'すべての城を失った。' + (o.by ? CL[o.by].who + 'の軍勢が最後の城に迫った。' : ''); A.S.lose(); }
-    else { big = '群雄のひとり'; cls = 'lose'; txt = end.era + '、' + me.n + '家は石高' + k + '・' + n + 'か国、' + o.place + '番目の勢力として残った。'; A.S.win(); }
+    else { big = '群雄のひとり'; cls = 'lose'; txt = end.era + '、' + me.n + '家は石高' + kokLabel(k) + '・' + n + 'か国、' + o.place + '番目の勢力として残った。'; A.S.win(); }
     head.textContent = big; head.className = 'big ' + cls; sub.textContent = txt;
     const st = S.clans[S.player];
     const dm = st.dom || {};
-    $('res-stats').innerHTML = [['石高', k], ['治めた国', n], ['最大版図', (st.peak || n) + '国'], ['落とした城', st.cap], ['臣従させた家', st.sub || 0], ['合戦 勝/敗', st.won + '/' + st.lost], ['奇襲', st.kishu], ['内政 徴/開/築', (dm.recruit || 0) + '/' + (dm.develop || 0) + '/' + (dm.fortify || 0)]].map(x => '<div><b>' + x[1] + '</b>' + x[0] + '</div>').join('');
+    $('res-stats').innerHTML = [['総石高', kokLabel(k)], ['治めた国', n], ['最大版図', (st.peak || n) + '国'], ['落とした城', st.cap], ['臣従させた家', st.sub || 0], ['合戦 勝/敗', st.won + '/' + st.lost], ['奇襲', st.kishu], ['内政 徴/開/築', (dm.recruit || 0) + '/' + (dm.develop || 0) + '/' + (dm.fortify || 0)]].map(x => '<div><b>' + x[1] + '</b>' + x[0] + '</div>').join('');
     drawChart();
     show('result', true);
     mode = 'result';
@@ -1377,10 +1392,11 @@
     x.clearRect(0, 0, c.width, c.height);
     const hist = S.hist, T = Math.max(hist.length - 1, 1);
     const maxN = Math.max(20, ...hist.map(h => Math.max(...Object.values(h))));
-    const X = t => 50 + (c.width - 80) * t / T, Y = n => c.height - 30 - (c.height - 60) * n / maxN;
+    const left = 72;
+    const X = t => left + (c.width - left - 30) * t / T, Y = n => c.height - 30 - (c.height - 60) * n / maxN;
     x.strokeStyle = 'rgba(255,240,200,0.15)'; x.lineWidth = 1;
     const stp = maxN > 150 ? 50 : maxN > 60 ? 20 : 10;
-    for (let n = 0; n <= maxN; n += stp) { x.beginPath(); x.moveTo(50, Y(n)); x.lineTo(c.width - 30, Y(n)); x.stroke(); x.fillStyle = 'rgba(255,240,200,0.5)'; x.font = '20px sans-serif'; x.fillText(String(n), 6, Y(n) + 6); }
+    for (let n = 0; n <= maxN; n += stp) { x.beginPath(); x.moveTo(left, Y(n)); x.lineTo(c.width - 30, Y(n)); x.stroke(); x.fillStyle = 'rgba(255,240,200,0.5)'; x.font = '20px sans-serif'; x.fillText(manGoku(n), 6, Y(n) + 6); }
     // 期間の区切り
     for (let t = 40; t < T; t += E.R.extTurns) { x.setLineDash([6, 6]); x.strokeStyle = 'rgba(255,200,120,0.35)'; x.beginPath(); x.moveTo(X(t), 20); x.lineTo(X(t), c.height - 30); x.stroke(); x.setLineDash([]); }
     // 最大石高の上位6家＋自分
@@ -1397,7 +1413,7 @@
       let lt = 0; hist.forEach((h, t) => { if (h[id]) lt = t; });
       x.fillStyle = CL[id].col; x.font = '700 22px sans-serif'; x.fillText(CL[id].n, Math.min(c.width - 90, X(lt) + 6), Y(hist[lt][id] || 0) - 6);
     }
-    x.fillStyle = 'rgba(255,240,200,0.55)'; x.font = '18px sans-serif'; x.fillText('石高の移り変わり', 56, 22);
+    x.fillStyle = 'rgba(255,240,200,0.55)'; x.font = '18px sans-serif'; x.fillText('石高の移り変わり（万石）', left + 6, 22);
   }
 
   // ───────── 入力 ─────────
@@ -1459,7 +1475,7 @@
     const o = V.owner[p], pr = D.PROV[p];
     let s = '<b>' + pr.n + '</b>　' + pr.c + (p === E.KYO ? '（京）' : '') + '<br>' + (o ? '<span class="sw" style="background:' + CL[o].col + '"></span>' + CL[o].n + '家' + (CL[o].major ? '' : '<small>（その他の大名）</small>') : '持ち主なし');
     const cap = E.devCap(p);
-    s += '<br>石高 <b>' + V.kok[p] + '</b><small>（' + V.kok[p] * 10 + '万石・開墾で' + cap + 'まで）</small>';
+    s += '<br>石高 <b>' + kokLabel(V.kok[p]) + '</b><small>（開墾で' + kokLabel(cap) + 'まで）</small>';
     if (o === S.player && V.kok[p] < cap) s += '　開墾 ' + V.kp[p] + '/' + E.devNeed(V, p);
     const ar = V.armies.find(a => a.n === p);
     s += '<br>' + (ar ? '籠もる軍勢 兵' + ar.t : '守備兵 ' + V.gar[p] + ' / ' + E.garMax(V, p, o)) + '　城の守り +' + E.castleDef(V, p, o) + (E.CAPITAL[p] && o && CL[o].major ? '（本拠）' : '');
@@ -1720,7 +1736,7 @@
     box.innerHTML = majors.map(c => {
       const nA = c.armies.length, nP = c.start.length;
       const k = c.start.reduce((x, p) => x + D.PROV[E.PI[p]].k, 0);
-      return '<div class="clan" data-id="' + c.id + '"><span class="mon md" style="background:' + c.col + '">' + c.mon + '</span><div><div class="nm">' + c.n + '家<span class="lv lv' + c.lvl + '">' + lv[c.lvl] + '</span></div><div class="who">' + c.who + '</div><div class="st">' + nP + 'か国・石高' + k + '・軍勢' + nA + '</div></div></div>';
+      return '<div class="clan" data-id="' + c.id + '"><span class="mon md" style="background:' + c.col + '">' + c.mon + '</span><div><div class="nm">' + c.n + '家<span class="lv lv' + c.lvl + '">' + lv[c.lvl] + '</span></div><div class="who">' + c.who + '</div><div class="st">' + nP + 'か国・石高' + kokLabel(k) + '・軍勢' + nA + '</div></div></div>';
     }).join('');
     box.querySelectorAll('.clan').forEach(el => el.addEventListener('click', () => pick(el.dataset.id)));
     pick(pickClan || lastClan || 'oda');

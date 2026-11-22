@@ -343,9 +343,12 @@
     // 守備兵の回復
     const step = trait(c) === 'meimon' ? 2 : 1;
     for (const p of provsOf(s, c)) s.gar[p] = Math.min(garMax(s, p, c), s.gar[p] + step);
-    s.phase = spawnOptions(s, c).length ? 'place' : 'roll';
+    s.phase = openingPhase(s);
     ev.push({ type: 'turn', clan: c });
     return ev;
+  }
+  function openingPhase(s) {
+    return spawnOptions(s, s.cur).length ? 'place' : 'roll';
   }
   // 新しい軍勢の出陣先：軍勢のいない自分の城。どの城にも軍勢がいるときは、城のすぐ外（国境のマス）
   function spawnOptions(s, c) {
@@ -678,6 +681,8 @@
     s.offers.splice(i, 1);
     if (!s.clans[c].alive || !s.player) return ev;
     absorb(s, c, s.player, ev);
+    // 臣従で軍勢数・石高・配置先が変わる。加入軍の行動済み印は保ったまま出陣を再判定する。
+    if (s.cur === s.player && (s.phase === 'place' || s.phase === 'roll')) s.phase = openingPhase(s);
     // 自分の手番の途中で加わった軍勢は、この季は動かない
     return ev;
   }
