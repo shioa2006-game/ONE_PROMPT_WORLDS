@@ -34,6 +34,7 @@
 | 13 | [からり、国盗り ― 賽の目 戦国絵巻](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game13/index.html) | サイコロ国盗り戦略 | マウス | Claude Fable 5.2 |
 | 14 | [天下賽配 ― 戦国サイコロ国盗り](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game14/index.html) | 采配ダイス国盗り戦略 | マウス | Claude Opus 5.5 |
 | 15 | [賽駆け ― 戦国・賽振り行軍記](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game15/index.html) | サイコロ行軍・領土争奪 | マウス | Claude Opus 5.5 |
+| 16 | [くるり、呪いほどき ― 魔法陣リールと灰の王国](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game16/index.html) | リール構築バトル | マウス | Claude Opus 5.5 |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
@@ -50,9 +51,10 @@
 - **からり、国盗り**：1560年秋の中部・近畿20国で、大名のひとりになってサイコロを振ります。表の目で攻め、裏の目で治める。大きい目はいくさに、小さい目は内政に強いので、出た目をどの国の何に使うかが毎季の作戦になります。20季のうちに、いちばん多くの国を治めて天下人をめざします。
 - **天下賽配**：1560年秋の中部・近畿20国で、振った賽を1つずつ国に置いて命令を下します。表の目は攻めの力、裏の目（7−出目）は内政の力。奇襲・調略・備えを使い分け、19家のCPU大名と競いながら、20季のうちに最大の勢力を築きます。
 - **賽駆け**：1560年の中国から関東までの49か国で、振った賽の目を自分の軍勢に1つずつ配り、日本地図の上を進軍させます。敵の城の隣に陣取り、味方で囲んで加勢し、ぴったりの目で奇襲する。8家のCPU大名と競いながら、京を含む18か国の天下布武をめざします。
+- **くるり、呪いほどき**：床の魔法陣がまるごとリールになっていて、止まった紋の上に立つ魔物は、詠唱で人にもどります。同じ紋のつながりで魔物をまとめて救い、▲▼で一コマずらしてつながりを狙う。救った人々にもらった紋で自分のリールを組んで育てながら、灰の魔女に呪われた王国を取りもどします。
 
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
-操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md) / [game13](game13/README.md) / [game14](game14/README.md) / [game15](game15/README.md)）にあります。
+操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md) / [game13](game13/README.md) / [game14](game14/README.md) / [game15](game15/README.md) / [game16](game16/README.md)）にあります。
 
 ## BEYOND ONE PROMPT の作品
 
@@ -88,10 +90,10 @@ assets/
   js/beyond.js              BEYOND ONE PROMPT の作品リスト（改修版）
   js/main.js                カードとタブの組み立て、背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/   WORLDS の各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/  game16/   WORLDS の各作品（それぞれ index.html から起動）
 beyond1/  beyond2/ …        BEYOND ONE PROMPT の各作品（原型をコピーして改修したもの）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書（01〜08、Claude Fable 5.2）
-Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12・14・15 は Claude Opus 5.5、13 は Claude Fable 5.2）
+Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12・14〜16 は Claude Opus 5.5、13 は Claude Fable 5.2）
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
 

@@ -228,5 +228,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-18',
     accent: '#d0503a'
+  },
+  {
+    title: 'くるり、呪いほどき',
+    subtitle: '魔法陣リールと灰の王国',
+    genre: 'リール構築バトル',
+    description: '灰の魔女に 呪われた王国。床の魔法陣が まるごと リールになっていて、止まった紋の上に立つ魔物は、詠唱で 人にもどる。同じ紋が となり合えば つながりになり、上に立つ魔物を まとめて救える。▲▼で 一コマずらして つながりを狙い、救った人々に もらった紋で 自分のリールを 組んで育てる。',
+    path: 'game16/index.html',
+    thumbnail: 'assets/thumbs/kururi-noroihodoki.webp',
+    thumbnailSmall: 'assets/thumbs/kururi-noroihodoki-640.webp',
+    thumbnailAlt: '「くるり、呪いほどき」のプレイ画面。夜の王都で、5本のリールが ならぶ 床の魔法陣。▲で 2本のリールを ずらすと 光の紋が 8個 つながり、その上に立つ 魔物3体に「ほどける」の 見こみが 出ている。左には 杖を持った 魔法使いと、人に もどった 村人たち。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-22',
+    accent: '#b48cff'
   }
 ];
