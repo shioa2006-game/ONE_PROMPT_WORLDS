@@ -176,7 +176,41 @@ function dice(s, vals) { s.dice = vals.map(v => ({ v, u: false })); s.phase = 'm
   s.owner[E.KYO] = 'oda';
   ok(E.diceCount(s, 'oda') === E.diceCount(blank('oda', { owari: 'oda' }), 'oda') + 1, 'kyoto +1 die');
   const big = blank('oda', {}); for (let p = 0; p < E.P; p++) big.owner[p] = 'oda';
-  ok(E.diceCount(big, 'oda') === R.diceMax + 1 && E.slots(big, 'oda') === R.slotMax, 'dice and slots capped');
+  ok(E.diceCount(big, 'oda') === 9, '京ありで賽は最大9個');
+  ok(E.slots(big, 'oda') === 29, '全国の初期石高1,900万石で29枠');
+  big.kok = big.kok.map((_, p) => E.devCap(p));
+  ok(E.slots(big, 'oda') === 53, '全国の開墾上限3,600万石で53枠');
+  big.owner[E.KYO] = 'hojo';
+  ok(E.diceCount(big, 'oda') === 8, '京なしで賽は最大8個');
+}
+
+// 大勢力の軍勢枠。領国・石高を実プレイ報告に合わせ、旧上限12部隊の記録から出陣する。
+{
+  const s = blank('oda', {});
+  s.owner = s.owner.map((_, p) => p < 50 ? 'oda' : p < 74 ? 'uesugi' : 'hojo');
+  for (const [clan, total] of [['oda', 196], ['uesugi', 83]]) {
+    let remaining = total - E.kokOf(s, clan);
+    for (const p of E.provsOf(s, clan)) {
+      const gain = Math.min(remaining, E.devCap(p) - s.kok[p]);
+      s.kok[p] += gain;
+      remaining -= gain;
+    }
+    ok(E.kokOf(s, clan) === total, clan + ' 比較用の石高');
+  }
+  ok(E.slots(s, 'oda') === 30 && E.slots(s, 'uesugi') === 13, '石高196と83の軍勢枠に差が出る');
+  for (const p of E.provsOf(s, 'oda').slice(0, 12)) {
+    s.armies.push({ id: s.aid++, c: 'oda', n: p, t: 10, mv: false });
+  }
+  const loaded = JSON.parse(JSON.stringify(s));
+  for (let count = 12; count < 30; count++) {
+    E.beginClanTurn(loaded);
+    const n = E.spawnOptions(loaded, 'oda')[0];
+    ok(loaded.phase === 'place' && E.spawn(loaded, n).length === 1 &&
+      E.armiesOf(loaded, 'oda').length === count + 1 && loaded.phase === 'roll', '出陣で' + (count + 1) + '部隊');
+    E.endClanTurn(loaded);
+  }
+  E.beginClanTurn(loaded);
+  ok(loaded.phase === 'roll' && !E.spawnOptions(loaded, 'oda').length, '石高に応じた30枠が埋まれば出陣停止');
 }
 
 // 10. 出陣：城が埋まっていれば城のすぐ外

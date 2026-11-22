@@ -111,7 +111,7 @@
   function armyAt(s, n) { for (const a of s.armies) if (a.n === n) return a; return null; }
   const armyById = (s, id) => s.armies.find(a => a.id === id) || null;
   function histRow(s) { const k = kokAll(s), o = {}; for (const c in k) if (k[c] > 0) o[c] = k[c]; return o; }
-  const slots = (s, c) => Math.min(R.slotMax, R.slotBase + Math.floor(kokOf(s, c) / R.slotDiv));
+  const slots = (s, c) => R.slotBase + Math.floor(kokOf(s, c) / R.slotDiv);
   function diceCount(s, c) {
     return Math.min(R.diceMax, R.diceBase + Math.floor(kokOf(s, c) / R.diceDiv)) + (s.owner[KYO] === c ? 1 : 0);
   }
