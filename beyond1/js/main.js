@@ -1418,8 +1418,7 @@
   // ───────── 入力 ─────────
   const cv = $('map');
   function hitAt(ev, extra) {
-    // 出陣先の国境マスが隣の駒の当たり判定に入っても、そのマスを選べるようにする。
-    return R.hitTest(ev.clientX, ev.clientY, V || BG, { extra, preferArmy: S?.phase !== 'place' });
+    return R.hitTest(ev.clientX, ev.clientY, V || BG, { extra });
   }
   function hlSet() {
     const s = new Set();
@@ -1569,14 +1568,7 @@
       return;
     }
     if (S.phase !== 'move') return;
-    let n = nodeOfHit(h);
-    if (curReach) {
-      const cand = curReach.moves.concat((U.targets || []).map(t => t.n));
-      let bn = null, bd = Math.max(14, 24 * R.glyphScale());
-      for (const m of cand) { const q = R.toScreen(POS[m][0], POS[m][1]); const d = Math.hypot(q[0] - ev.clientX, q[1] - ev.clientY); if (d < bd) { bd = d; bn = m; } }
-      const ownArmyHit = h && h.kind === 'army' && (E.armyById(S, h.id) || {}).c === S.player;
-      if (bn != null && !ownArmyHit) n = bn;
-    }
+    const n = nodeOfHit(h);
     if (curReach && n != null) {
       if (U.targets && U.targets.some(t => t.n === n)) { doMove(n); return; }
       if (curReach.moves.includes(n) && !(h && h.kind === 'army' && h.n === n)) { doMove(n); return; }

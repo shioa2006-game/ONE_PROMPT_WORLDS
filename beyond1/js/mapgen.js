@@ -159,7 +159,7 @@
         const nd = E.nodes[i];
         if (nd.t === 'S') continue;
         const a = POS[nd.a], b = POS[nd.b];
-        want[Math.min(nd.a, nd.b) * 256 + Math.max(nd.a, nd.b)] = { i, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, best: Infinity, x: 0, y: 0 };
+        want[Math.min(nd.a, nd.b) * 256 + Math.max(nd.a, nd.b)] = { i, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, best: Infinity, x: 0, y: 0, choices: [] };
       }
       const CASTLES = POS.slice(0, E.P);
       const R2 = Math.round(9 * RS);
@@ -173,6 +173,7 @@
         if (!land[i1 - R2] || !land[i1 + R2] || !land[i1 - R2 * MW] || !land[i1 + R2 * MW]) coast = 40;
         let d = Math.hypot(wx - w.mx, wy - w.my) + coast;
         for (const cp of CASTLES) { const dc = Math.hypot(wx - cp[0], wy - cp[1]); if (dc < 26) d += (26 - dc) * 4; }
+        if (geography) w.choices.push([wx, wy, d]);
         if (d < w.best) { w.best = d; w.x = wx; w.y = wy; }
       };
       for (let y = 1; y < MH - 1; y += 1) for (let x = 1; x < MW - 1; x += 1) {
@@ -202,6 +203,56 @@
       for (const k in want) {
         const w = want[k];
         if (w.best < Infinity || w.best2 !== undefined) POS[w.i] = [w.x, w.y];
+      }
+      if (geography) {
+        // 三つの国が近くで接する所では、別々の峠・街道が同じ角に寄りやすい。
+        // 海路と城を固定し、陸路を保てる位置を共有国境の上で探す。
+        const crowdedGap = 22, gap = 28;
+        const clearance = (n, x, y) => {
+          let min = gap * gap;
+          for (let i = 0; i < E.N; i++) {
+            if (i === n) continue;
+            const dx = x - POS[i][0], dy = y - POS[i][1];
+            min = Math.min(min, dx * dx + dy * dy);
+          }
+          return Math.sqrt(min);
+        };
+        const onLand = (castle, node, point) => {
+          const path = [POS[castle], ...between(castle, node), point];
+          for (let i = 1; i < path.length; i++) {
+            const [x, y] = path[i - 1], [tx, ty] = path[i];
+            const steps = Math.max(1, Math.ceil(Math.hypot(tx - x, ty - y) * RS));
+            for (let k = 0; k <= steps; k++) {
+              const u = Math.floor((x + (tx - x) * k / steps) * RS);
+              const v = Math.floor((y + (ty - y) * k / steps) * RS);
+              if (!land[v * MW + u]) return false;
+            }
+          }
+          return true;
+        };
+        const crowded = Object.values(want)
+          .filter(w => w.choices.length)
+          .map(w => ({ ...w, space: clearance(w.i, w.x, w.y) }))
+          .filter(w => w.space < crowdedGap)
+          .sort((a, b) => a.space - b.space);
+        for (const w of crowded) {
+          let bestGap = clearance(w.i, ...POS[w.i]);
+          if (bestGap >= crowdedGap) continue;
+          const { a, b } = E.nodes[w.i];
+          const separated = POS.filter(([x, y]) => Math.hypot(x - w.x, y - w.y) >= crowdedGap);
+          w.choices.sort((a, b) => a[2] - b[2]);
+          for (const [x, y] of w.choices) {
+            if (Math.hypot(x - w.x, y - w.y) > 48) continue;
+            const space = clearance(w.i, x, y);
+            if (space < gap && space < bestGap + 1) continue;
+            if (space < crowdedGap && separated.some(([px, py]) => Math.hypot(x - px, y - py) < crowdedGap)) continue;
+            const point = [x, y];
+            if (!onLand(a, w.i, point) || !onLand(b, w.i, point)) continue;
+            POS[w.i] = point;
+            bestGap = space;
+            if (space >= gap) break;
+          }
+        }
       }
       build.missing = miss.map(w => E.nodes[w.i].key);
     }

@@ -701,29 +701,26 @@
 
   const easeOut = k => 1 - Math.pow(1 - k, 3);
 
-  // 画面座標での当たり判定。opt.borders=false で国境のマスを拾わない
+  // 軍勢とマスを同じ距離で比較し、隣の軍勢の判定がマスの中心を覆わないようにする。
   function hitTest(sx, sy, V, opt) {
     opt = opt || {};
     const g = glyphScale(), s = view.s;
-    const scr = n => [view.ox + POS[n][0] * s, view.oy + POS[n][1] * s];
-    let best = null, bd = Infinity;
-    for (const a of V.armies) {
-      const p = scr(a.n);
-      const d = Math.hypot(p[0] - sx, p[1] - sy);
-      if (d < Math.max(10, 17 * g) && d < bd) { bd = d; best = { kind: 'army', id: a.id, n: a.n }; }
-    }
-    if (best && opt.preferArmy !== false) return best;
     const borders = opt.borders != null ? opt.borders : detail() >= 1;
-    const extra = opt.extra || null;
-    let bn = null; bd = Infinity;
+    const armies = new Map(V.armies.map(a => [a.n, a.id]));
+    let best = null, bd = Infinity;
     for (let n = 0; n < E.N; n++) {
-      if (n >= E.P && !borders && !(extra && extra.has(n))) continue;
-      const p = scr(n);
-      const d = Math.hypot(p[0] - sx, p[1] - sy);
-      const lim = n < E.P ? Math.max(10, 19 * g) : Math.max(8, 12 * g);
-      if (d < lim && d < bd) { bd = d; bn = n; }
+      const id = armies.get(n), highlighted = opt.extra?.has(n);
+      if (n >= E.P && !borders && id == null && !highlighted) continue;
+      const dx = view.ox + POS[n][0] * s - sx, dy = view.oy + POS[n][1] * s - sy;
+      const d = dx * dx + dy * dy;
+      const radius = highlighted ? Math.max(14, 24 * g) :
+        id != null ? Math.max(10, 17 * g) : n < E.P ? Math.max(10, 19 * g) : Math.max(8, 12 * g);
+      if (d < radius * radius && d < bd) {
+        best = id == null ? { kind: 'node', n } : { kind: 'army', id, n };
+        bd = d;
+      }
     }
-    if (bn != null) return { kind: 'node', n: bn };
+    if (best) return best;
     const [wx, wy] = toWorld(sx, sy);
     const RS = M.RS;
     const ix = Math.floor(wx * RS), iy = Math.floor(wy * RS);
