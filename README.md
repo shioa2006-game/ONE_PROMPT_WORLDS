@@ -38,6 +38,7 @@
 | 17 | [ずらり、砦くずし ― 詠唱盤と黒鉄の街道](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game17/index.html) | リール詠唱・砦攻め | マウス | Claude Opus 5.5 |
 | 18 | [がらり、迷宮ひらき ― 詠唱輪と地図の空白](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game18/index.html) | リール詠唱・迷宮探索 | マウス | Claude Opus 5.5 |
 | 19 | [せーの、星見の露台へ ― 三人で行く、大洞の遠征](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game19/index.html) | クォータービュー探索・戦術 | マウス | Claude Opus 5.5 |
+| 20 | [STAIRWARD ― 峠の砦と五つの夜](https://shioa2006-game.github.io/ONE_PROMPT_WORLDS/game20/index.html) | クォータービュー防衛・配置 | マウス | Claude Opus 5.5 |
 
 - **ぽん、と森は灯る**：胞子をとばすと、落ちた場所にキノコが生えます。生えたキノコを次の発射台にして、くらい森を灯しながら奥の大樹をめざします。
 - **ひとつぶ庭園**：砂・水・種・火種の四つの粒をびんに注ぎ、粒どうしの反応だけで、小さな夜の庭を咲かせます。
@@ -58,9 +59,10 @@
 - **ずらり、砦くずし**：言葉を刻んだリールを回すと、止まった横一行がそのまま呪文になり、三本の道へ飛んでいきます。▲▼で一コマずらせば言葉が隣の行へ移り、呪文の形と行き先が変わる。救った人々にもらった言葉で自分の詠唱盤を組んで育てながら、魔王軍が街道に建てた黒鉄の砦を崩していきます。
 - **がらり、迷宮ひらき**：地図描きの見習いになって、師匠の地図のいちばん下の「空白」を描きに、底なしの大穴を降りていきます。リールの横の行に同じ紋をそろえると、呪文が魔物を手前から貫き、余った力が部屋の奥の壁に届く。茨は炎、地底湖は氷で開き、撃ちぬいた先が地図の新しい道になります。見つけた紋を自分のリールに刻みながら、断面図の迷宮を下へ描きこんでいきます。
 - **せーの、星見の露台へ**：盾の戦士ガルド、斥候リコ、氷の術師セナの三人で、町はずれの大穴「大洞」の底をめざします。斜め上から見わたす段差のダンジョンで、ガルドが木箱や敵を押し、リコが射て縄をかけ、セナが水や敵を凍らせる。道がひらけると、新しく行ける床に光の波が走り、だれの働きで何が変わったかが字幕に残ります。戦いも同じ地形の上で、手番制で行います。
+- **STAIRWARD**：焼け出された村の人たちが逃げこんだ峠の古い砦「きざはし砦」を、雪がゆるむまでの五つの夜、少人数の仲間と守ります。石段・門・崖道から迫る敵を予兆で読み、盾のイルザ、火のルゥ、弓のカイたちの持ち場を決めたら、あとは仲間が自分で構え、受け止め、焼き、射るのを見届けます。守れなかったら、どこを通されたかを見て、一人だけ持ち場を変えてすぐにやり直せます。
 
 各作品は PC のブラウザ（Chrome / Edge 推奨）で遊ぶことを想定しています。音が出ます。
-操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md) / [game13](game13/README.md) / [game14](game14/README.md) / [game15](game15/README.md) / [game16](game16/README.md) / [game17](game17/README.md) / [game18](game18/README.md) / [game19](game19/README.md)）にあります。
+操作やあそびかたの詳細は、各フォルダの README（[game](game/README.md) / [game2](game2/README.md) / [game3](game3/README.md) / [game4](game4/README.md) / [game5](game5/README.md) / [game6](game6/README.md) / [game7](game7/README.md) / [game8](game8/README.md) / [game9](game9/README.md) / [game10](game10/README.md) / [game11](game11/README.md) / [game12](game12/README.md) / [game13](game13/README.md) / [game14](game14/README.md) / [game15](game15/README.md) / [game16](game16/README.md) / [game17](game17/README.md) / [game18](game18/README.md) / [game19](game19/README.md) / [game20](game20/README.md)）にあります。
 
 ## BEYOND ONE PROMPT の作品
 
@@ -96,10 +98,10 @@ assets/
   js/beyond.js              BEYOND ONE PROMPT の作品リスト（改修版）
   js/main.js                カードとタブの組み立て、背景の演出
   thumbs/                   サムネイル（実際のゲーム画面、16:9）
-game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/  game16/  game17/  game18/  game19/   WORLDS の各作品（それぞれ index.html から起動）
+game/  game2/  game3/  game4/  game5/  game6/  game7/  game8/  game9/  game10/  game11/  game12/  game13/  game14/  game15/  game16/  game17/  game18/  game19/  game20/   WORLDS の各作品（それぞれ index.html から起動）
 beyond1/  beyond2/ …        BEYOND ONE PROMPT の各作品（原型をコピーして改修したもの）
 Fable52_Autonomous_Game_Design_Prompt.md   制作に使った基本指示書（01〜08、Claude Fable 5.2）
-Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12・14〜19 は Claude Opus 5.5、13 は Claude Fable 5.2）
+Opus55_Autonomous_Game_Design_Prompt.md    制作に使った基本指示書（09〜12・14〜20 は Claude Opus 5.5、13 は Claude Fable 5.2）
 .nojekyll                   GitHub Pages でファイルをそのまま配信するための空ファイル
 ```
 

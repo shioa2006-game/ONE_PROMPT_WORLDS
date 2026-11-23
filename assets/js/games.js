@@ -284,5 +284,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-23',
     accent: '#9db4ff'
+  },
+  {
+    title: 'STAIRWARD',
+    subtitle: '峠の砦と五つの夜',
+    genre: 'クォータービュー防衛・配置',
+    description: '峠の 古い砦に、焼け出された 村の人たちが 逃げこんだ。雪が ゆるむまで あと五日。石段・門・崖道から 迫る 夜の群れを 予兆で読み、盾のイルザや 火のルゥたち 仲間の 持ち場を 決めたら、あとは 見届けるだけ。先頭を 受け止め、詰まった列を まとめて焼く。守れなかったら、一人だけ 持ち場を 変えて すぐ やり直せる。',
+    path: 'game20/index.html',
+    thumbnail: 'assets/thumbs/stairward.webp',
+    thumbnailSmall: 'assets/thumbs/stairward-640.webp',
+    thumbnailAlt: '「STAIRWARD」のプレイ画面。斜め上から見た 夜の砦。石段の 踊り場で 盾のイルザが 小鬼の列の 先頭を 受け止め、すぐ上の 城壁から ルゥの 火球が 列に落ちて「×4」。ルゥの「ぜんぶ、燃えろーっ！」の 吹き出しと、右上に「受けて、焼く　新しい連携！ イルザ×ルゥ」の 見出し。門の上では 弓のカイが、坂道を のぼる 小鬼を 狙っている。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-23',
+    accent: '#ffc46a'
   }
 ];
