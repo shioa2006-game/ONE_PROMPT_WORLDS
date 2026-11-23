@@ -1391,7 +1391,7 @@
       const x = px + 20 + (k % 10) * 71, y = 116 + Math.floor(k / 10) * 66;
       if (y > 260) return;
       const isHeld = held && held.from === 'inv' && held.idx === k;
-      const b = btn({ x: x, y: y, w: 66, h: 60, invisible: true, on: () => { App.held = isHeld ? null : { from: 'inv', idx: k }; A.play('click'); }, key: `inv${k}` });
+      const b = btn({ x: x, y: y, w: 66, h: 60, invisible: true, on: () => { App.campMode = 'place'; App.held = isHeld ? null : { from: 'inv', idx: k }; A.play('click'); }, key: `inv${k}` });
       V.word(ctx, Z.W, w, x, y, 66, 60, { small: true, hot: b.hot || isHeld });
       tip(x, y, 66, 60, Z.W[w.k].name + `（${Z.ROLE[Z.W[w.k].role].name}）`, Z.W[w.k].desc + ' 押してから、光るマスを押すと刻める。');
     });
@@ -1423,7 +1423,10 @@
         V.text(ctx, held.from === 'inv' ? '光るマスへ（Esc・右クリックでやめる）' : '同じリールの別のマスで入れ替え', px + 370, 576, { size: 11, weight: 600, color: '#fff2d0' });
       }
     }
-    if (App.campMode === 'up') V.text(ctx, '源のリールの言葉を押すと、金貨で一段強くなる（Lv3まで）', px + 370, 590, { size: 13, weight: 600, color: '#ffe0a0' });
+    if (App.campMode === 'up' && !held) {
+      V.text(ctx, '鍛える：源の言葉を押す', px + 370, 552, { size: 14, weight: 800, color: '#ffe9b0' });
+      V.text(ctx, '金貨で一段強く（Lv3まで）・Escでやめる', px + 370, 576, { size: 11, weight: 600, color: '#fff2d0' });
+    }
     // 最初の工房の案内
     if (s.stage === 1 && s.inv.some(w => w.k === 'lance') && !App.overlay) {
       V.panel(ctx, 520, 612, 600, 50, { dark: true });
@@ -1434,7 +1437,12 @@
     const s = S();
     const held = App.held;
     if (App.campMode === 'up') {
-      if (Z.upgrade(s, i, j)) { A.play('buy'); toast('鍛えた！'); saveGame('camp'); } else A.play('deny');
+      const w = s.reels[i].strip[j], c = Z.upCost(s, w);
+      if (Z.upgrade(s, i, j)) { A.play('buy'); toast('鍛えた！'); saveGame('camp'); return; }
+      A.play('deny');
+      if (c !== null) toast(`金貨が足りない（鍛えるには ${c}）`);
+      else if (Z.W[w.k].role !== 'src') toast('鍛えられるのは源の言葉だけ。刻むなら「鍛えるのをやめる」を押す');
+      else toast('この言葉は、今はこれ以上鍛えられない');
       return;
     }
     if (held && held.from === 'inv') {
@@ -1646,6 +1654,7 @@
     if (App.overlay) { if (App.overlay.kind !== 'gift') App.overlay = null; return; }
     if (App.scene === 'camp') {
       if (App.held) { App.held = null; return; }
+      if (App.campMode === 'up') { App.campMode = 'place'; return; }
       const b = hitBtn(App.mx, App.my);
       if (b && b.onRight) b.onRight();
       return;
@@ -1672,7 +1681,7 @@
       return;
     }
     if (App.scene === 'story') { if (k === ' ' || k === 'Enter') { storyNext(); ev.preventDefault(); } if (k === 'Escape') { const f = App.story.then; App.story = null; f(); } return; }
-    if (App.scene === 'camp') { if (k === 'Escape') App.held = null; return; }
+    if (App.scene === 'camp') { if (k === 'Escape') { if (App.held) App.held = null; else App.campMode = 'place'; } return; }
     if (App.scene === 'map') { if (k === ' ' || k === 'Enter') { const b = App.btns.find(x => x.key === 'next'); if (b && !b.disabled) b.on(); ev.preventDefault(); } return; }
     if (App.scene !== 'battle' || !BS) return;
     if (k === 'Escape') { App.overlay = { kind: 'menu', t: 0 }; return; }
