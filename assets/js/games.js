@@ -270,5 +270,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-23',
     accent: '#8ec8a0'
+  },
+  {
+    title: 'せーの、星見の露台へ',
+    subtitle: '三人で行く、大洞の遠征',
+    genre: 'クォータービュー探索・戦術',
+    description: '町はずれの 大穴「大洞」の底に、火を入れれば 町からも見える 大灯籠が ある。盾の戦士ガルド、斥候リコ、氷の術師セナの 三人で、段差と 谷と 水を 読みながら 降りていく。ガルドが 押し、リコが 縄をかけ、セナが 凍らせる。道が ひらけると、新しく 行ける床に 光の波が 走る。',
+    path: 'game19/index.html',
+    thumbnail: 'assets/thumbs/seeno-hoshiminorodai.webp',
+    thumbnailSmall: 'assets/thumbs/seeno-hoshiminorodai-640.webp',
+    thumbnailAlt: '「せーの、星見の露台へ」のプレイ画面。斜め上から見た 大洞の入口で、ガルドが 押した 木箱が 高い段の 下に落ちて 足場になり、上の段の 草地に 光の波が 走っている。「道がひらけた！ 新しく 24 マスに行ける」の 文字と、下に 三人の札と「木箱が段の下へ落ちて、足場になった」の 字幕。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-23',
+    accent: '#9db4ff'
   }
 ];
