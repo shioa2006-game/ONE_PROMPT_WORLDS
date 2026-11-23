@@ -256,5 +256,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-23',
     accent: '#f0a848'
+  },
+  {
+    title: 'がらり、迷宮ひらき',
+    subtitle: '詠唱輪と地図の空白',
+    genre: 'リール詠唱・迷宮探索',
+    description: 'だれも底を見たことがない 大穴。地図描きの 見習いミオは、師匠の地図の いちばん下の「空白」を 描きに 降りていく。リールの横の行に 同じ紋を そろえると、呪文が 魔物を 手前から 貫き、余った力が 奥の壁に 届く。茨は炎、湖は氷。撃ちぬいた先が、地図の 新しい道になる。',
+    path: 'game18/index.html',
+    thumbnail: 'assets/thumbs/garari-meikyuhiraki.webp',
+    thumbnailSmall: 'assets/thumbs/garari-meikyuhiraki-640.webp',
+    thumbnailAlt: '「がらり、迷宮ひらき」のプレイ画面。根の坑道の 茨の間で、3本のリールの 中の行に 炎が 三つ そろい「炎×3 6」。三つの段の 小鬼と 茨っこの 上に「倒す」、中の段の 奥の 茨の壁に「燃える！」の 見こみが 出ている。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-23',
+    accent: '#8ec8a0'
   }
 ];
