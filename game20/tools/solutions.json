@@ -1,0 +1,12 @@
+{
+ "1-1": {"ilza": "s_land", "ruu": "w_sw"},
+ "1-2": {"ilza": "s_land", "ruu": "w_sw", "kai": "g_n"},
+ "2-1": {"ilza": "s_land", "ruu": "w_sw", "kai": "g_n"},
+ "2-2": {"ilza": "s_land", "ruu": "g_n", "kai": "w_se"},
+ "3-1": {"ilza": "s_land", "ruu": "g_n", "kai": "w_se", "dugan": "c_bend"},
+ "3-2": {"ilza": "s_land", "ruu": "g_n", "kai": "w_se", "dugan": "c_bend"},
+ "4-1": {"ilza": "s_land", "ruu": "g_n", "kai": "k_corner", "dugan": "c_bend", "mel": "w_sw"},
+ "4-2": {"ilza": "g_in", "ruu": "w_sw", "kai": "k_stair", "dugan": "c_bend", "mel": "g_n"},
+ "5-1": {"ilza": "s_land", "ruu": "w_sw", "kai": "c_ledge", "dugan": "g_in", "mel": "s_top"},
+ "5-2": {"ilza": "c_bend", "ruu": "g_s", "kai": "g_n", "dugan": "c_mid", "mel": "c_ledge"}
+}
