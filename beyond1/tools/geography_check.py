@@ -19,6 +19,27 @@ def inspect_map(page):
         ['izu',34.78,138.91], ['suo',34.18,131.75], ['iwami',34.91,132.19],
         ['hida',36.16,137.26], ['kai',35.28,138.46], ['osumi',31.81,130.56],
       ].filter(([id,lat,lon]) => idx[pixel(MAP.proj(lat,lon))] !== E.PI[id]);
+      // 三国境・岬・湾岸の旧飛び地から、同じ国の画素を上下左右にたどって城へ戻れるか。
+      const detached = [
+        ['harima',34.90,135.12], ['hoki',35.4797,133.3214], ['satsuma',31.7352,130.6705],
+      ].filter(([id,lat,lon]) => {
+        const p = E.PI[id], start = pixel(MAP.proj(lat,lon)), castle = pixel(pos[p]);
+        if (idx[start] !== p) return true;
+        const seen = new Set([start]), pending = [start];
+        while (pending.length) {
+          const n = pending.pop();
+          if (n === castle) return false;
+          const x = n % MW, neighbors = [n-MW,n+MW];
+          if (x > 0) neighbors.push(n-1);
+          if (x+1 < MW) neighbors.push(n+1);
+          for (const next of neighbors) {
+            if (idx[next] !== p || seen.has(next)) continue;
+            seen.add(next);
+            pending.push(next);
+          }
+        }
+        return true;
+      });
       // 海岸と国境を両方描いた後の縦横比。周防大島など海を隔てた島は外す。
       const shapes = [];
       for (const [names,island,min,max] of [
@@ -60,7 +81,7 @@ def inspect_map(page):
           }
         }
       }
-      return {castles,shores,shapes,borders,sea,wetRoads};
+      return {castles,shores,detached,shapes,borders,sea,wetRoads};
     }""")
 
 

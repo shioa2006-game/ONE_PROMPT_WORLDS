@@ -259,8 +259,6 @@
   };
   function paint(idx, land, width, height, scale, islandIds) {
     const patches = Object.entries(faces).map(([id,ring]) => [id, facePath(ring), group]);
-    // 播磨との国境を丹波との三国境から明石側の海岸へ下ろす。
-    patches.push(['harima',facePath('tanbaWest harimaTri harimaSea izumiNorth'),new Set([E.PI.settsu])]);
     patches.push(['settsu',facePath('harimaTri kyotoWest yawata sakai baySea harimaSea'),new Set([E.PI.harima])]);
     patches.push(['kitaomi', kohoku, new Set([E.PI.echizen,E.PI.mino])]);
     const three = new Set(Object.keys(tokaido).map(id => E.PI[id]));
@@ -275,6 +273,8 @@
         }
       }
     }
+    // 中国地方を塗った後に播磨・摂津の境を確定し、三国境まで但馬の色が入り込むのを防ぐ。
+    patches.push(['harima',facePath('tanbaWest harimaTri harimaSea izumiNorth'),new Set([E.PI.settsu])]);
     patches.push(['wakasa',wakasa,new Set(['wakasa','echizen','kitaomi','tanba','tango'].map(id=>E.PI[id]))]);
     for (const [id, polygon, eligible, island = islandIds.honshu] of patches) {
       const points = outline(polygon).map(([x,y]) => [x * scale, y * scale]);
