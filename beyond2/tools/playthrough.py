@@ -6,12 +6,17 @@
 #   v0.2：依頼5・依頼6の戦いは、想定攻略手順（tools/plans_lib.js）の一手ずつを本物のクリックに置きかえる（ボットは段取りを組めない）
 #         鍛冶屋でお守りを買い、ドーラの腕だめし帳でごほうびを受けとり、結末のあと別の二人で受けなおす（--replay。お守りを持たせて出発）
 #   --reload: 依頼から帰るたびにページを読みなおし、タイトルの「つづきから」で再開できるかも確かめる
+#   v0.3：第一章の結末と受けなおしのあと、第二章（m7・m8）へ進む（--ch2 m7:GT,m8:ST）。ナギの加入・大うちわ・鷹の目の羽かざりを買い、
+#         ナギ入りの編成で第一章を受けなおす（--nagi-replay m4:TN）。引き鉤（引く）・あおぐも、本物のクリックでねらう
 import json, os, sys, time, subprocess
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL = 'file:///' + os.path.join(ROOT, 'index.html').replace('\\', '/')
-PARTY = {'GS': ['gard', 'sena'], 'GT': ['gard', 'tobi'], 'ST': ['sena', 'tobi']}
+PARTY = {'GS': ['gard', 'sena'], 'GT': ['gard', 'tobi'], 'ST': ['sena', 'tobi'], 'GN': ['gard', 'nagi'], 'SN': ['sena', 'nagi'], 'TN': ['tobi', 'nagi']}
+DEFAULT_CH2 = 'm7:GT,m8:ST'
+DEFAULT_NAGI_REPLAY = 'm4:TN'
+BUY_AFTER_CH2 = {'m8': ['fan', 'c_hawk']}
 DEFAULT_ORDER = 'm1:GS,m2:GS,m3:GS,m4:ST,m5:GT,m6:GS'
 # 依頼5・依頼6の想定手順は「道具なし」で書いてあるので、道具は第一章のあとに買う。お守りは石切り場のあとに買い、受けなおしで持たせる
 BUY_AFTER = {'m3': ['c_plate'], 'm6': ['bow', 'gauntlet']}
@@ -34,6 +39,8 @@ def main():
     policy = args[args.index('--policy') + 1] if '--policy' in args else 'greedy'
     order = [x.split(':') for x in (args[args.index('--order') + 1] if '--order' in args else DEFAULT_ORDER).split(',')]
     replay = [x.split(':') for x in (args[args.index('--replay') + 1] if '--replay' in args else DEFAULT_REPLAY).split(',') if x]
+    ch2 = [x.split(':') for x in (args[args.index('--ch2') + 1] if '--ch2' in args else DEFAULT_CH2).split(',') if x]
+    nagi_replay = [x.split(':') for x in (args[args.index('--nagi-replay') + 1] if '--nagi-replay' in args else DEFAULT_NAGI_REPLAY).split(',') if x]
     routes = load_routes()
     errs = []
     stats = {'clicks': 0, 'keys': 0, 'fallback': 0, 'turns': 0, 'fights': 0}
@@ -116,10 +123,12 @@ def main():
                 return {'x': c['x'], 'y': c['y'] - 6}
             if k == 'rope':
                 return pg.evaluate(f"G21.objScreen('{intent['o']}')")
-            if k == 'push':
+            if k == 'push' or (k in ('pull', 'waft') and 'dir' in intent):
+                # 押す・引く・あおぐ：物（人）の、動かしたい向きの側にマウスを寄せる
                 c = pg.evaluate(f"G21.entCenter({json.dumps(ref)})")
                 off = pg.evaluate(f"G21.dirOffset({intent['dir']})")
-                return {'x': c['x'] + off[0], 'y': c['y'] + off[1]}
+                f = 0.8 if k == 'waft' and 'u' in ref else 1.0
+                return {'x': c['x'] + off[0] * f, 'y': c['y'] + off[1] * f}
             if ref and 'u' in ref:
                 return pg.evaluate(f"G21.unitScreen('{ref['u']}')")
             if ref and 'o' in ref:
@@ -135,6 +144,8 @@ def main():
             for f in ('x', 'y', 'o', 'dir'):
                 if f in intent and a.get(f) != intent[f]:
                     return False
+            if intent['k'] == 'pull' and 'dir' not in intent and a.get('dir') is not None and 'u' in (intent.get('ref') or {}):
+                return False
             if 'ref' in intent and a.get('ref') != intent['ref']:
                 return False
             return True
@@ -209,10 +220,17 @@ def main():
         def do(hero, intent, label=''):
             mode = pg.evaluate('G21.state().mode')
             cur = pg.evaluate('G21.G.sel')
-            if cur != hero and (mode == 'combat' or intent['k'] in ('move', 'blast')):
+            # あおぐ・引く・射る（つらら）は、選んでいる人で決まるので、その人を選んでからねらう（v0.3）
+            if cur != hero and (mode == 'combat' or intent['k'] in ('move', 'blast', 'waft', 'pull')):
                 kk = hero_key(hero)
                 if kk:
                     key(kk); pg.wait_for_timeout(120)
+            # 戦いの中でリコが敵を指すとき：引くなら札の上の「引く：入」、射るなら「切」にする
+            if mode == 'combat' and hero == 'riko' and intent.get('ref', {}).get('u') and pg.evaluate("G21.S.can(G21.state(), 'riko', 'pull')"):
+                want = intent['k'] == 'pull'
+                if bool(pg.evaluate('!!G21.G.pullMode')) != want:
+                    btn('pullMode'); pg.wait_for_timeout(120)
+                    stats['toggle'] = stats.get('toggle', 0) + 1
             before = sig()
             at = None
             for _try in range(3):
@@ -382,6 +400,18 @@ def main():
                 btn('charmpick_' + want); pg.wait_for_timeout(250)
             print('  お守り：', pg.evaluate('JSON.stringify(G21.prof().equip)'))
 
+        def skip_js(skip):
+            if skip.startswith('ice:'):
+                return f"(() => {{ const st = G21.state(); const [x, y] = '{skip[4:]}'.split(',').map(Number); return st.t[G21.S.idx(st, x, y)] === 'i'; }})()"
+            if skip.startswith('gone:'):
+                return f"(() => {{ const o = G21.S.objById(G21.state(), '{skip[5:]}'); return !o || !!o.gone; }})()"
+            if skip.startswith('down:'):
+                return f"!!(G21.S.objById(G21.state(), '{skip[5:]}') || {{}}).down"
+            if skip.startswith('yle:'):
+                _, uid, yy = skip.split(':')
+                return f"(() => {{ const u = G21.S.unitById(G21.state(), '{uid}'); return !!u && u.y <= {yy}; }})()"
+            return f"!!G21.state().flags['{skip}']"
+
         def run_mission(idx, mid, pk, equip=False):
             party = PARTY[pk]
             t0 = time.time()
@@ -421,10 +451,12 @@ def main():
             if pg.evaluate('G21.state().mode') == 'combat':
                 fight(f'{11 + idx * 10}_{mid}_fight0', pk)
             rt = routes[mid].get(pk) or routes[mid]['GS']
+            if pg.evaluate('G21.state().units.some(u => u.guestHero)'):
+                print('  同行のゲスト:', pg.evaluate("G21.state().units.filter(u => u.team === 'h').map(u => u.id).join(',')"))
             for k, step in enumerate(rt):
                 hero, intent = step[0], step[1]
                 skip = step[2] if len(step) > 2 else None
-                if skip and pg.evaluate((f"(() => {{ const st = G21.state(); const [x, y] = '{skip[4:]}'.split(',').map(Number); return st.t[G21.S.idx(st, x, y)] === 'i'; }})()") if skip.startswith('ice:') else f"!!G21.state().flags['{skip}']"):
+                if skip and pg.evaluate(skip_js(skip)):
                     continue
                 do(hero, intent)
                 if pg.evaluate('G21.state().mode') == 'combat':
@@ -451,7 +483,7 @@ def main():
                 pending_buys.extend(BUY_AFTER.get(mid, []))   # 結末の場面のあいだは、ギルドへもどってから買う
                 return
             claim_ledger(f'{16 + idx * 10}_{mid}')
-            buy(idx, mid, BUY_AFTER.get(mid, []))
+            buy(idx, mid, BUY_AFTER.get(mid, []) + BUY_AFTER_CH2.get(mid, []))
 
         def buy(idx, mid, items):
             for item in items:
@@ -505,10 +537,36 @@ def main():
                 print(f'受けなおし {mid} {pk}（お守りを持たせる）')
                 run_mission(10 + j, mid, pk, equip=True)
             btn('h_rec'); pg.wait_for_timeout(400); shot('99_records'); btn('closerec')
+            # ---- 第二章（v0.3）：m7 → m8（ナギ加入）→ ナギ入りで第一章を受けなおす ----
+            btn('h_board'); pg.wait_for_timeout(300)
+            keys = [b['key'] for b in pg.evaluate('G21.buttons()')]
+            print('第二章：依頼板に m7 がある', 'req_m7' in keys, ' 予告の札は消えた', 'req_ch2' not in keys)
+            shot('A0_board_ch2')
+            btn('closeboard')
+            EQUIP['riko'] = 'c_hawk'
+            for j, (mid, pk) in enumerate(ch2):
+                if reload_each:
+                    reload_and_continue()
+                print(f'第二章 {mid} {pk}')
+                run_mission(20 + j, mid, pk)
+            print('仲間:', pg.evaluate('G21.prof().roster'), ' ランク★', pg.evaluate('G21.C.rankInfo(G21.prof()).star'), ' 道具', pg.evaluate('JSON.stringify(G21.prof().up)'), ' お守り', pg.evaluate('G21.prof().charms'))
+            btn('h_board'); pg.wait_for_timeout(300)
+            keys = [b['key'] for b in pg.evaluate('G21.buttons()')]
+            if 'req_ch2b' in keys:
+                btn('req_ch2b'); pg.wait_for_timeout(200); shot('A1_board_teaser2')
+                print('第二章のつづきの予告:', pg.evaluate('G21.D.TEASER2.text'))
+            btn('closeboard')
+            for j, (mid, pk) in enumerate(nagi_replay):
+                if reload_each:
+                    reload_and_continue()
+                print(f'ナギ入りの受けなおし {mid} {pk}（鷹の目の羽かざりをリコに）')
+                run_mission(30 + j, mid, pk, equip=True)
+            btn('h_rec'); pg.wait_for_timeout(400); shot('A9_records'); btn('closerec')
         print('所要（ゲーム内）:', round(pg.evaluate('G21.prof().time')), '秒  銀貨', pg.evaluate('G21.prof().coins'), '  ランク★', pg.evaluate('G21.C.rankInfo(G21.prof()).star'), '  印', pg.evaluate('G21.C.stampCount(G21.prof())'), pg.evaluate('JSON.stringify(Object.keys(G21.prof().stamps))'))
         br.close()
     print(f"赤い線の確かめ：手順どおり {stats.get('expect_ok', 0)}、ちがう {stats.get('expect_ng', 0)}")
     print(f"見こみ（押す前の字幕）と結果の字幕：同じ {stats.get('pv_same', 0)}、ちがう {stats.get('pv_diff', 0)}　押す直前のねらい直し {stats.get('reaim', 0)}")
+    print(f"「引く」の切りかえ {stats.get('toggle', 0)}")
     print(f"クリック {stats['clicks']}、キー {stats['keys']}、戦い {stats['fights']}、手番終了 {stats['turns']}、見わたし {stats.get('pans', 0)}、ねらい直し {stats.get('adjust', 0)}、見わたしを飛ばす {stats.get('skip', 0)}、吹き出し送り {stats.get('bubble', 0)}、口で代行 {stats['fallback']}、かかった時間 {time.time() - t_start:.0f}秒（ツール込み）")
     if errs:
         print('ERRORS:', *errs[:20], sep='\n  ')

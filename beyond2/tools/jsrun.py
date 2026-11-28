@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL = 'file:///' + os.path.join(ROOT, 'index.html').replace('\\', '/')
-PARTY = {'GS': ['gard', 'sena'], 'GT': ['gard', 'tobi'], 'ST': ['sena', 'tobi']}
+PARTY = {'GS': ['gard', 'sena'], 'GT': ['gard', 'tobi'], 'ST': ['sena', 'tobi'], 'GN': ['gard', 'nagi'], 'SN': ['sena', 'nagi'], 'TN': ['tobi', 'nagi']}
 
 
 def main():
@@ -24,7 +24,8 @@ def main():
         pg.goto(URL)
         pg.wait_for_timeout(400)
         pg.add_script_tag(path=os.path.join(ROOT, 'tools', 'bot.js'))
-        pg.evaluate("G21.setOpt({fast: true}); G21.newProfile(); G21.prof().roster.push('tobi'); G21.prof().up.rope2 = true")
+        # v0.3：第二章の手順も通せるように、ナギ・引き鉤を持たせておく（m7 は宝箱で引き鉤を拾う）
+        pg.evaluate("G21.setOpt({fast: true}); G21.newProfile(); G21.prof().roster.push('tobi', 'nagi'); G21.prof().up.rope2 = true")
 
         def idle(limit=30):
             t0 = time.time()
@@ -62,6 +63,8 @@ def main():
         for mid in mids:
             party = PARTY[pk] if pk in routes[mid] else PARTY['GS']
             key = pk if pk in routes[mid] else 'GS'
+            if mid == 'm8':
+                pg.evaluate("G21.prof().up.hook = true")
             pg.evaluate(f"G21.mission('{mid}', {json.dumps(party)})")
             pg.wait_for_timeout(300)
             pg.keyboard.press('Space')
@@ -71,8 +74,20 @@ def main():
                 fight(mid + '_' + str(i))
                 hero, intent = step[0], step[1]
                 skip = step[2] if len(step) > 2 else None
-                if skip and pg.evaluate(f"!!G21.state().flags['{skip}']"):
-                    continue
+                if skip:
+                    if skip.startswith('gone:'):
+                        js = f"(() => {{ const o = G21.S.objById(G21.state(), '{skip[5:]}'); return !o || !!o.gone; }})()"
+                    elif skip.startswith('down:'):
+                        js = f"!!(G21.S.objById(G21.state(), '{skip[5:]}') || {{}}).down"
+                    elif skip.startswith('yle:'):
+                        _, uid, yy = skip.split(':')
+                        js = f"(() => {{ const u = G21.S.unitById(G21.state(), '{uid}'); return !!u && u.y <= {yy}; }})()"
+                    elif skip.startswith('ice:'):
+                        js = f"(() => {{ const st = G21.state(); const [x, y] = '{skip[4:]}'.split(',').map(Number); return st.t[G21.S.idx(st, x, y)] === 'i'; }})()"
+                    else:
+                        js = f"!!G21.state().flags['{skip}']"
+                    if pg.evaluate(js):
+                        continue
                 pg.evaluate(f"G21.select('{hero}')")
                 ok = pg.evaluate(f"(() => {{ const p = G21.act('{hero}', {json.dumps(intent)}); return p.ok ? 'ok' : p.why }})()")
                 if ok != 'ok':

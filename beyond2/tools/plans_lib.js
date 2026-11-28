@@ -64,6 +64,19 @@ const M6 = {
     [['riko', { k: 'shoot', ref: 'boss' }], ['sena', { k: 'freeze', ref: 'boss' }], ['tobi', { k: 'blast', at: 'boss' }]],
     [['riko', 'botAny'], ['sena', 'botAny'], ['tobi', 'botAny']],
   ],
+  // v0.3：ガルド＋ナギ（受けなおし）。ガルドの段取りはガルド＋セナと同じ。ナギは取りまきの相手（ボットに選ばせる）
+  GN: [
+    [['gard', L(2, 7)], ['riko', { k: 'shoot', ref: 'near:2,5' }], ['nagi', 'bot']],
+    [['gard', L(0, 6)], ['riko', { k: 'shoot', ref: 'near:4,6', soft: true }], ['nagi', 'bot'], { expect: '7,6' }],
+    // 第3手番：ナギは下の段の東 (12,8) へよけておく（第4手番にリコが (7,8) へ下りるため）
+    [['gard', { k: 'push', ref: { o: 'o1' }, dir: 0 }], ['riko', { k: 'shoot', ref: 'boss' }], ['nagi', L(12, 8)], ['nagi', 'bot']],
+    [['riko', L(7, 8)], ['riko', { k: 'shoot', ref: 'boss' }], ['nagi', 'bot'], ['gard', L(3, 6)]],
+    // 第5手番から先は、ナギの位置で大亀の行き先が変わる（設計の手順ではないので、赤い線の確かめはしない）。ふちへ来たら、ガルドが押し落とす
+    [['gard', { k: 'push', ref: { o: 'o1' }, dir: 0 }], ['riko', 'bot'], ['nagi', 'bot']],
+    [['gard', { k: 'push', ref: 'boss', dir: 1, soft: true }], ['riko', { k: 'shoot', ref: 'boss' }], ['nagi', 'botAny'], ['gard', 'botAny']],
+    [['riko', { k: 'shoot', ref: 'boss' }], ['nagi', 'botAny'], ['gard', 'botAny']],
+    [['riko', 'botAny'], ['nagi', 'botAny'], ['gard', 'botAny']],
+  ],
 };
 // 依頼5：右の渡り口を止め、橋の出口を仲間がふさぐ → 盗っ人が橋の上に並ぶ → ふさいだ仲間がよけて、大岩を北へ
 const M5 = {
@@ -114,10 +127,11 @@ function intentOf(st, it) {
   }
   return I;
 }
-// 'bot'：大亀に手を出さない手のうち、ボットの評価がいちばん良いもの
+// 'bot'：大亀に手を出さない手（仲間をあおいで動かす手も、段取りがくずれるので除く）のうち、ボットの評価がいちばん良いもの
 function botPick(st, hero, any) {
   const boss = st.units.find(u => u.boss && !u.ko);
-  const cands = BOT.candidates(st, hero).filter(q => any || !boss || (!(q.intent.ref && q.intent.ref.u === boss.id) && !(q.intent.k === 'blast' && Math.abs(q.intent.x - boss.x) + Math.abs(q.intent.y - boss.y) <= 1)));
+  const allyWaft = (q) => q.intent.k === 'waft' && q.intent.ref && q.intent.ref.u && (S.unitById(st, q.intent.ref.u) || {}).team === 'h';
+  const cands = BOT.candidates(st, hero).filter(q => any || ((!boss || (!(q.intent.ref && q.intent.ref.u === boss.id) && !(q.intent.k === 'blast' && Math.abs(q.intent.x - boss.x) + Math.abs(q.intent.y - boss.y) <= 1))) && !allyWaft(q)));
   let best = null, bs = -1e18;
   for (const q of cands) { const c = S.clone(st); S.apply(c, q); const sc = BOT.evalState(c); if (sc > bs) { bs = sc; best = q; } }
   return best;

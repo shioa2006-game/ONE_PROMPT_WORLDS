@@ -7,12 +7,15 @@
   const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
   // 冒険者。verbs はその人ができる働きかけ（行動の判定は名前ではなく、これで行う）
   const HERO = {
-    riko: { name: 'リコ', role: '斥候', hp: 6, mov: 4, verbs: ['shoot', 'rope'], verbName: '射る・鉤縄', color: '#8fd45e' },
-    gard: { name: 'ガルド', role: '重戦士', hp: 9, mov: 3, verbs: ['push'], verbName: '押す', color: '#ef8a45' },
+    // 「引く」は引き鉤（up.hook）を持っているときだけ（v0.3。can・heroWith で見る）
+    riko: { name: 'リコ', role: '斥候', hp: 6, mov: 4, verbs: ['shoot', 'rope', 'pull'], verbName: '射る・鉤縄', color: '#8fd45e' },
+    gard: { name: 'ガルド', role: '重戦士', hp: 9, mov: 3, verbs: ['push'], verbName: '押す', color: '#ef8a45', heavy: true },   // 重い（ナギはあおげない）
     sena: { name: 'セナ', role: '氷の術師', hp: 6, mov: 3, verbs: ['freeze'], verbName: '凍らせる', color: '#72cdff' },
     tobi: { name: 'トビ', role: '発破師', hp: 7, mov: 3, verbs: ['blast'], verbName: '発破', color: '#c792ff' },
+    // 第二章（v0.3）：風守りナギ。となりの軽い物・敵・仲間を、2升先へ運ぶ（04 2章・05 2.1）
+    nagi: { name: 'ナギ', role: '風守り', hp: 6, mov: 4, verbs: ['waft'], verbName: 'あおぐ', color: '#f2c14e' },
   };
-  const COMPANIONS = ['gard', 'sena', 'tobi'];
+  const COMPANIONS = ['gard', 'sena', 'tobi', 'nagi'];
   const ENEMY = {
     goblin: { name: '小鬼', hp: 3, mov: 3, atk: 2, range: 1 },
     raider: { name: '盗っ人小鬼', hp: 3, mov: 4, atk: 1, range: 1, raid: true },
@@ -22,19 +25,30 @@
     golem: { name: '岩人形', hp: 7, mov: 2, atk: 2, range: 1, heavy: true },
     wisp: { name: '水霊', hp: 3, mov: 3, atk: 2, range: 3, ranged: true, swim: true },
     turtle: { name: '岩喰い大亀', hp: 22, mov: 2, atk: 3, range: 1, heavy: true, armor: true, slam: true, big: true },
+    // 第二章（v0.3）。snow: 深い雪でも遅くならない
+    snowgob: { name: '雪小鬼', hp: 3, mov: 3, atk: 2, range: 1, snow: true },
+    // climb: のぼり下りできる段（2段）／pack: ねらった相手のとなりに、ほかの雪狼がいれば傷+1（05 4.3）
+    wolf: { name: '雪狼', hp: 3, mov: 5, atk: 2, range: 1, snow: true, climb: 2, pack: 1 },
   };
   // お守りの効果（一人に一つ。新しい働きかけは持たせない）。名前と手に入れ方は data.js の CHARMS
-  const CHARM_FX = { c_plate: { hp: 2 }, c_tag: { endure: 1 }, c_tabi: { mov: 1 } };
+  const CHARM_FX = { c_plate: { hp: 2 }, c_tag: { endure: 1 }, c_tabi: { mov: 1 }, c_hawk: { range: 1 } };
   // 行き場がなくなった敵が逃げるまでの手番（盗っ人だけ長い。05 1.4）
   const STUCK = { normal: 2, raid: 4 };
   const NPC = {
     miner: { name: '鉱夫' }, tobi: { name: 'トビ' }, kid: { name: '子ども' },
   };
   const RANGE = { shoot: 5, rope: 5, rope2: 8, freeze: 4, blast: 4 };
-  const OBJ_H = { crate: 1, block: 1, iceblock: 1, beam: 1, boulder: 1, rubble: 1, pillar: 3, door: 3, statue: 2, crack: 2, crystal: 2, deco: 2, wagon: 2, lantern: 2 };
+  const OBJ_H = { crate: 1, block: 1, iceblock: 1, beam: 1, boulder: 1, rubble: 1, pillar: 3, door: 3, statue: 2, crack: 2, crystal: 2, deco: 2, wagon: 2, lantern: 2, lever: 2, chime: 2 };
   const TOPS = ['crate', 'block', 'iceblock', 'beam', 'rubble'];          // 上に立てる物
-  const BLOCKS = ['pillar', 'boulder', 'door', 'statue', 'crack', 'crystal', 'deco', 'wagon', 'lantern']; // ふさぐ物
+  const BLOCKS = ['pillar', 'boulder', 'door', 'statue', 'crack', 'crystal', 'deco', 'wagon', 'lantern', 'lever', 'chime']; // ふさぐ物
   const PUSHABLE = ['crate', 'block', 'iceblock', 'boulder'];
+  // 引き鉤で引ける物（軽い物。05 2.2）。つららは升の真上にぶら下がる（その升には立てる）
+  const PULLABLE = ['crate', 'iceblock'];
+  const ICICLE_Z = 3;   // つららがぶら下がっている高さ（升の地面から）
+  const PULL_MAX = 4, PULL_MOVE = 2;
+  // あおぐ（ナギ）：運べる物。距離は2（大うちわで3）
+  const WAFTABLE = ['crate', 'iceblock'];
+  function waftDist(st) { return st.up && st.up.fan ? 3 : 2; }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function idx(st, x, y) { return y * st.W + x; }
@@ -47,8 +61,11 @@
   function info(u) { return isHero(u) ? HERO[u.k] : isFoe(u) ? ENEMY[u.k] : NPC[u.k] || { name: u.name || '人' }; }
   function fly(u) { return isFoe(u) && !!ENEMY[u.k].fly && !(u.frozen > 0); }
   function weak(u) { return isNpc(u) || !!u.guest; }  // 縄は渡れない（救助する人・けが人）
-  function can(st, heroId, verb) { const u = unitById(st, heroId); return !!u && isHero(u) && HERO[u.k].verbs.indexOf(verb) >= 0; }
-  function heroWith(st, verb) { const u = st.units.find(h => isHero(h) && !h.ko && HERO[h.k].verbs.indexOf(verb) >= 0); return u ? u.id : null; }
+  // その人がいまできる働きかけ（引く＝引き鉤を持っているとき）
+  function verbsOf(st, k) { const v = HERO[k] ? HERO[k].verbs : []; return v.filter(x => x !== 'pull' || (st && st.up && st.up.hook)); }
+  function verbLabel(k, up) { if (k === 'riko' && up && up.hook) return '射る・鉤縄・引く'; return HERO[k] ? HERO[k].verbName : ''; }
+  function can(st, heroId, verb) { const u = unitById(st, heroId); return !!u && isHero(u) && verbsOf(st, u.k).indexOf(verb) >= 0; }
+  function heroWith(st, verb) { const u = st.units.find(h => isHero(h) && !h.ko && verbsOf(st, h.k).indexOf(verb) >= 0); return u ? u.id : null; }
 
   function newStats() {
     // foeKo: 倒した敵の種類と倒れ方／downs: 倒れた仲間の数／bestRoll: 大岩ひとつで倒した最多／boulderFlip: 大岩でひっくり返した回数
@@ -107,8 +124,21 @@
       const u = { id, k: id, team: 'h', x: p[0], y: p[1], z: 0, hp, mhp: hp, mov, mv: mov, acted: false, frozen: 0, ko: false, face: p[2] === undefined ? 3 : p[2] };
       if (cid) u.charm = cid;
       if (fx.endure) u.tag = 1;          // 身がわりの木札：依頼ごとに一度だけ、倒れる傷を体力1でこらえる
+      if (fx.range) u.rangeUp = fx.range; // 鷹の目の羽かざり：射る・凍らせる・発破の届く距離+1
       st.units.push(u);
     });
+    // 同行のゲスト：選んだ二人に加えて、その仲間が最初から4人目として出る（ふつうに歩ける。v0.3）
+    if (def.guest && !party.includes(def.guest) && def.start && def.start[party.length]) {
+      const p = def.start[party.length], id = def.guest;
+      const cid = charms[id] && CHARM_FX[charms[id]] ? charms[id] : null;
+      const fx = cid ? CHARM_FX[cid] : {};
+      const hp = HERO[id].hp + st.hpb + (fx.hp || 0), mov = HERO[id].mov + (fx.mov || 0);
+      const u = { id, k: id, team: 'h', x: p[0], y: p[1], z: 0, hp, mhp: hp, mov, mv: mov, acted: false, frozen: 0, ko: false, face: p[2] === undefined ? 3 : p[2], guestHero: true };
+      if (cid) u.charm = cid;
+      if (fx.endure) u.tag = 1;
+      if (fx.range) u.rangeUp = fx.range;
+      st.units.push(u);
+    }
     for (const n of def.npcs || []) {
       st.units.push({ id: n.id, k: n.k, team: 'n', x: n.x, y: n.y, z: 0, hp: 9, mhp: 9, mv: 0, acted: true, frozen: 0, ko: false, face: n.face === undefined ? 1 : n.face, name: n.name || (NPC[n.k] || {}).name, guest: n.guest || null, found: !!n.found, safe: false, rescue: n.rescue !== false, foundSay: n.foundSay || null, safeSay: n.safeSay || null, onFound: n.onFound || null, sit: !!n.sit });
     }
@@ -123,6 +153,8 @@
     st.capAt = clone(def.capAt || {});          // 大岩が止まった升ごとの字幕（m5 の栓など）
     st.flipSay = clone(def.flipSay || null);    // はじめてひっくり返したときのひとこと
     st.rollSay = clone(def.rollSay || null);    // 大岩でまとめて倒したときのひとこと
+    st.waftSay = clone(def.waftSay || null);    // はじめて雪狼をあおいで谷へ落としたときのひとこと（v0.3）
+    st.runeSay = clone(def.runeSay || null);    // 装置が一つ動くたびのひとこと（{n} は数）
     st.drains = clone(def.drains || []);
     st.waves = clone(def.waves || []);
     st.raid = def.raid ? { cells: clone(def.raid.cells), sacks: def.raid.sacks, max: def.raid.sacks } : null;
@@ -200,6 +232,8 @@
     const dz = b.z - fromZ;
     // 重い敵（岩人形・大亀）は、1段ずつしか上り下りできない
     if (u && isFoe(u) && ENEMY[u.k] && ENEMY[u.k].heavy) return dz <= 1 && dz >= -1;
+    // 雪狼は、段を2段のぼれる（下りも2段。05 4.3）
+    if (u && isFoe(u) && ENEMY[u.k] && ENEMY[u.k].climb) return dz <= ENEMY[u.k].climb && dz >= -ENEMY[u.k].climb;
     return dz <= 1 && dz >= -2;
   }
   function linkFrom(st, x, y, u) {
@@ -236,7 +270,7 @@
       for (const [nx, ny, cost, isLink] of nbs) {
         if (!inside(st, nx, ny)) continue;
         const ni = idx(st, nx, ny);
-        const nc = cd.c + cost;
+        const nc = cd.c + (isLink ? cost : cost * snowCost(st, u, nx, ny));
         if (nc > max) continue;
         if (dist.has(ni) && dist.get(ni).c <= nc) continue;
         const tmp = { x: cx, y: cy, z: cd.z, k: u.k, team: u.team, frozen: u.frozen, guest: u.guest };
@@ -255,6 +289,15 @@
       }
     }
     return dist;
+  }
+  // 深い雪：戦いの中で、その升へ入る歩数が2（雪に慣れた敵・飛ぶ敵は1。物の上に立つなら雪ではない）。探索中は影響なし（05 3.1）
+  function snowCost(st, u, x, y) {
+    if (st.mode !== 'combat') return 1;
+    if (st.t[idx(st, x, y)] !== 'n') return 1;
+    if (isFoe(u) && ENEMY[u.k] && (ENEMY[u.k].snow || fly(u))) return 1;
+    if (u.escort) return 1;
+    for (const o of st.objs) if (!o.gone && o.x === x && o.y === y && TOPS.includes(o.k)) return 1;
+    return 2;
   }
   function pathTo(st, dist, i) {
     const out = [];
@@ -303,6 +346,111 @@
     const u = unitAt(st, ent.x, ent.y);
     if (u) return { ok: false, why: '上にだれかが立っている' };
     return { ok: true, ent, kind };
+  }
+
+  // ---------- あおげるもの（05 2.1） ----------
+  // kind: 'o' 物／'e' 敵／'h' 仲間。slide: 凍った重い敵（浮かずにすべりだす）／flyer: 飛ぶ敵（2D 升まで流される）
+  function waftInfo(st, ref, heroId) {
+    const isU = !!ref.u;
+    const ent = isU ? unitById(st, ref.u) : objById(st, ref.o);
+    if (!ent || ent.gone || ent.ko) return { ok: false, why: 'ない' };
+    if (isU) {
+      if (ent.id === heroId) return { ok: false, why: '自分は運べない' };
+      if (isHero(ent)) {
+        if (HERO[ent.k] && HERO[ent.k].heavy) return { ok: false, why: '重すぎる（' + HERO[ent.k].name + 'はあおげない）', heavy: true };
+        if (ent.fixed || ent.guest) return { ok: false, why: '歩けない人は運べない' };
+        return { ok: true, ent, kind: 'h' };
+      }
+      if (isNpc(ent)) return { ok: false, why: '救助される人は運べない' };
+      if (!ent.active) return { ok: false, why: '眠っている敵はあおげない' };
+      const E = ENEMY[ent.k];
+      if (E.swim) return { ok: false, why: '水霊には風が通らない' };
+      if (E.heavy) return ent.frozen > 0 ? { ok: true, ent, kind: 'e', slide: true } : { ok: false, why: '重すぎる（凍らせれば、すべりだす）', heavy: true };
+      if (fly(ent)) return { ok: true, ent, kind: 'e', flyer: true };
+      return { ok: true, ent, kind: 'e' };
+    }
+    if (ent.k === 'chime') return ent.rung ? { ok: false, why: 'もう鳴った' } : { ok: true, ent, chime: true };
+    if (['boulder', 'block', 'pillar', 'icepillar'].includes(ent.k)) return { ok: false, why: '重すぎる', heavy: true };
+    if (!WAFTABLE.includes(ent.k)) return { ok: false, why: 'あおげない' };
+    for (const o of st.objs) if (!o.gone && o !== ent && o.x === ent.x && o.y === ent.y && o.z > ent.z && !['plate', 'icicle', 'torch'].includes(o.k)) return { ok: false, why: '上に物がのっている' };
+    if (unitAt(st, ent.x, ent.y)) return { ok: false, why: '上にだれかが立っている' };
+    return { ok: true, ent, kind: 'o' };
+  }
+  // 下りる升：d＝D から 1 へ順に調べる。途中の升は「もとの高さ＋2」以下（谷・水・外は越える）。stand はナギの立つ升（下りる先にしない）
+  function waftDest(st, ent, kind, dir, D, stand, actorId) {
+    const [dx, dy] = DIRS[dir];
+    const z0 = ent.z;
+    const isO = kind === 'o';
+    let high = false, blocked = false;
+    for (let d = D; d >= 1; d--) {
+      let clear = true;
+      for (let k = 1; k < d; k++) {
+        const s = surface(st, ent.x + dx * k, ent.y + dy * k, isO ? ent : null);
+        if (s.out || s.void || s.water) continue;
+        const top = s.block ? Math.max(s.z, s.blockTop) : s.z;
+        if (top > z0 + 2 || s.wall) { clear = false; break; }
+      }
+      if (!clear) { high = true; continue; }
+      const x = ent.x + dx * d, y = ent.y + dy * d;
+      const s = surface(st, x, y, isO ? ent : null);
+      let u = unitAt(st, x, y, isO ? null : ent);
+      if (u && u.id === actorId) u = null;   // あおぐ本人は、立つ升へ歩いていく
+      const here = stand && stand[0] === x && stand[1] === y;
+      if (isO) {
+        if (s.out || (s.void && !u)) return { d, x, y, land: 'lost' };
+        if (u && isFoe(u)) { if (u.z <= z0 + 2) return { d, x, y, z: u.z, land: 'hit', foe: u }; high = true; continue; }
+        if (u || here) { blocked = true; continue; }
+        if (s.water) return { d, x, y, z: st.h[idx(st, x, y)], land: 'sink' };
+        if (s.block || s.wall || !s.stand) { blocked = true; continue; }
+        if (s.z > z0 + 2) { high = true; continue; }
+        return { d, x, y, z: s.z, land: s.ice ? 'ice' : 'floor' };
+      }
+      if (kind === 'e') {
+        if (s.out || (s.void && !u)) return { d, x, y, land: 'void' };
+        if (u || here) { blocked = true; continue; }
+        if (s.water) return { d, x, y, z: st.h[idx(st, x, y)], land: 'drown' };
+        if (!s.stand) { blocked = true; continue; }
+        if (s.z > z0 + 2) { high = true; continue; }
+        return { d, x, y, z: s.z, land: s.ice ? 'ice' : 'floor' };
+      }
+      // 仲間：だれもいない立てる升へ（谷・水・外へは下ろさない）
+      if (s.out || s.void || s.water || !s.stand || u || here) { blocked = true; continue; }
+      if (s.z > z0 + 2) { high = true; continue; }
+      return { d, x, y, z: s.z, land: 'floor' };
+    }
+    return { why: high && !blocked ? '3段上で届かない' : high ? '下りる先がない（高すぎる升・ふさがった升）' : '下りる先がない' };
+  }
+
+  // ---------- 引けるもの（引き鉤。05 2.2） ----------
+  function pullInfo(st, ref) {
+    const isU = !!ref.u;
+    const ent = isU ? unitById(st, ref.u) : objById(st, ref.o);
+    if (!ent || ent.gone || ent.ko) return { ok: false, why: 'ない' };
+    if (isU) {
+      if (!isFoe(ent)) return { ok: false, why: '仲間は引かない' };
+      if (!ent.active) return { ok: false, why: '眠っている敵は引けない' };
+      const E = ENEMY[ent.k];
+      if (E.swim && !(ent.frozen > 0)) return { ok: false, why: '水霊には手ごたえがない（水ごと凍らせれば閉じこめられる）' };
+      if (E.heavy && !(ent.frozen > 0)) return { ok: false, why: '重すぎて引けない（凍らせれば、すべって寄ってくる）', heavy: true };
+      return { ok: true, ent, isU };
+    }
+    if (ent.k === 'lever') return ent.done ? { ok: false, why: 'もう引いた' } : { ok: true, ent, lever: true };
+    if (['boulder', 'block', 'pillar', 'icepillar'].includes(ent.k)) return { ok: false, why: '重すぎて引けない', heavy: true };
+    if (!PULLABLE.includes(ent.k)) return { ok: false, why: '引けない' };
+    for (const o of st.objs) if (!o.gone && o !== ent && o.x === ent.x && o.y === ent.y && o.z > ent.z && !['plate', 'icicle', 'torch'].includes(o.k)) return { ok: false, why: '上に物がのっている' };
+    if (unitAt(st, ent.x, ent.y)) return { ok: false, why: '上にだれかが立っている' };
+    return { ok: true, ent, isU: false };
+  }
+  // 写しの上で、リコを stand に立たせて引いてみる（最初の1升が動くか）
+  function pullTrial(st, heroId, ref, d, stand) {
+    try {
+      const c = clone(st);
+      if (c.mode !== 'combat') c.units = c.units.filter(x => !(isHero(x) && x.id !== heroId && !x.fixed));
+      const r = unitById(c, heroId); r.x = stand[0]; r.y = stand[1]; r.z = standZ(c, r.x, r.y, r);
+      const ent = ref.u ? unitById(c, ref.u) : objById(c, ref.o);
+      const res = pushEntity(c, ent, !!ref.u, d, [], { who: [heroId], text: '', kills: 0, combo: false, big: 0 }, { dist: PULL_MOVE, why: 'pull', noHit: true, stopAt: stand });
+      return res.moved > 0;
+    } catch (err) { return false; }
   }
 
   // ---------- 行動の計画（どこに立って、何をするか） ----------
@@ -358,6 +506,71 @@
       if (!dist.has(i) || !okStand(i)) return { ok: false, why: combat ? 'そこまで歩けない' : 'そちら側に回れない' };
       return res(i, { topple: !!pi.topple });
     }
+    if (intent.k === 'waft') {
+      // あおぐ（05 2.1）：となりの軽い物・敵・仲間を、反対側へ2升（大うちわで3）。風鳴り石は鳴らす
+      if (!can(st, heroId, 'waft')) return { ok: false, why: 'あおげるのはナギ' };
+      const wi = waftInfo(st, intent.ref, heroId);
+      if (!wi.ok) return wi;
+      const e = wi.ent;
+      if (wi.chime) {
+        let best = null;
+        for (const [dx, dy] of DIRS) {
+          const sx = e.x + dx, sy = e.y + dy;
+          if (!inside(st, sx, sy)) continue;
+          const i = idx(st, sx, sy), ss = surface(st, sx, sy);
+          if (!ss.stand || Math.abs(ss.z - e.z) > 1 || !dist.has(i) || !okStand(i)) continue;
+          if (!best || dist.get(i).c < dist.get(best).c) best = i;
+        }
+        if (best === null) return { ok: false, why: combat ? 'この手番では、となりへ行けない' : 'となりに立てない' };
+        return res(best, { tx: e.x, ty: e.y, tz: e.z, chime: true });
+      }
+      if (intent.dir === undefined) return { ok: false, why: '向きがない' };
+      const [dx, dy] = DIRS[intent.dir];
+      const sx = e.x - dx, sy = e.y - dy;
+      if (!inside(st, sx, sy)) return { ok: false, why: 'そちら側に回れない' };
+      const ss = surface(st, sx, sy);
+      if (!ss.stand) return { ok: false, why: 'そちら側に立てない' };
+      if (Math.abs(ss.z - e.z) > 1) return { ok: false, why: '高さがちがって、あおげない' };
+      const i = idx(st, sx, sy);
+      if (!dist.has(i) || !okStand(i)) return { ok: false, why: combat ? 'そこまで歩けない' : 'そちら側に回れない' };
+      if (i === idx(st, e.x, e.y)) return { ok: false, why: '自分は運べない' };
+      // 下りる升（凍った重い敵はすべりだす・飛ぶ敵は流される）
+      if (!wi.slide && !wi.flyer) {
+        const dest = waftDest(st, e, wi.kind, intent.dir, waftDist(st), [sx, sy], heroId);
+        if (!dest.land) return { ok: false, why: dest.why };
+      }
+      return res(i, { tx: e.x, ty: e.y, tz: e.z });
+    }
+    if (intent.k === 'pull') {
+      // 引き鉤（05 2.2）：相手と一直線（間の升が1〜3）。相手はリコのほうへ最大2升。レバーは距離1〜4
+      if (!can(st, heroId, 'pull')) return { ok: false, why: u.k === 'riko' ? '引き鉤があれば、引ける' : '引けるのはリコ（引き鉤）', needHook: u.k === 'riko' };
+      const pi = pullInfo(st, intent.ref);
+      if (!pi.ok) return pi;
+      const e = pi.ent;
+      const dirs = intent.dir !== undefined ? [intent.dir] : [0, 1, 2, 3];
+      let best = null, why = null;
+      for (const d of dirs) {
+        const [dx, dy] = DIRS[d];
+        let bd = null;
+        for (let k = pi.lever ? 1 : 2; k <= PULL_MAX; k++) {
+          const sx = e.x + dx * k, sy = e.y + dy * k;
+          if (!inside(st, sx, sy)) break;
+          const i = idx(st, sx, sy);
+          if (!dist.has(i) || !okStand(i)) continue;
+          if (e.z > dist.get(i).z + 2) { why = why || '高すぎて届かない（引けるのは2段上まで）'; continue; }
+          // 探索中は、眠っている敵を起こさない升を先に選ぶ（歩数が同じくらいなら）
+          const c = dist.get(i).c + (!combat && wakeCheck(st, sx, sy) ? 50 : 0);
+          if (!bd || c < bd.c) bd = { i, d, c };
+        }
+        if (!bd) continue;
+        // 最初の1升が動けないなら、引けない（写しで試す）
+        if (!pi.lever && !pullTrial(st, heroId, intent.ref, d, [bd.i % st.W, (bd.i / st.W) | 0])) { why = '引っかかって動かない'; continue; }
+        if (!best || bd.c < best.c) best = bd;
+      }
+      if (!best) return { ok: false, why: why || (combat ? 'この手番では、一直線に並ぶ升まで行けない（距離' + PULL_MAX + 'まで）' : '一直線に並ぶ升に立てない（距離' + PULL_MAX + 'まで）'), range: PULL_MAX };
+      if (u.fixed && best.i !== idx(st, u.x, u.y)) return { ok: false, why: 'ここからでは引けない' };
+      return res(best.i, { tx: e.x, ty: e.y, tz: e.z, pullDir: best.d, lever: !!pi.lever });
+    }
     if (intent.k === 'shoot' || intent.k === 'rope' || intent.k === 'freeze' || intent.k === 'blast') {
       const no = verbOk(intent.k, { shoot: '射られるのはリコ', rope: '鉤縄はリコ', freeze: '凍らせられるのはセナ', blast: '発破はトビ' }[intent.k]); if (no) return no;
       let tx, ty, tz, R, extra = {};
@@ -369,18 +582,28 @@
         if (unitAt(st, tx, ty, u)) return { ok: false, why: '輪の下にだれかいる' };
         if (u.x === tx && u.y === ty) return { ok: false, why: 'もう輪のところにいる' };
       } else if (intent.k === 'shoot') {
-        R = RANGE.shoot + (st.up.bow ? 1 : 0);
+        R = RANGE.shoot + (st.up.bow ? 1 : 0) + (u.rangeUp || 0);
         if (intent.ref.u) {
           const t = unitById(st, intent.ref.u);
           if (!t || t.ko || !isFoe(t)) return { ok: false, why: '射る相手がいない' };
           tx = t.x; ty = t.y; tz = t.z;
         } else {
           const o = objById(st, intent.ref.o);
-          if (!o || o.k !== 'target' || o.hit) return { ok: false, why: 'もう当たっている' };
-          tx = o.x; ty = o.y; tz = o.z;
+          if (o && o.k === 'icicle') {
+            // つらら：射ると落ちる（05 3.2）。下に仲間・救助される人がいる升は落とせない
+            if (o.gone) return { ok: false, why: 'もう落ちた' };
+            // 探索中は、ついてくる仲間（とリコ自身）は歩いてどくので、動けない人だけを見る
+            const under = unitAt(st, o.x, o.y);
+            const movesAway = !combat && under && isHero(under) && !under.fixed;
+            if (under && !isFoe(under) && !movesAway) return { ok: false, why: '下に仲間がいる（落とせない）' };
+            tx = o.x; ty = o.y; tz = o.z + ICICLE_Z;
+          } else {
+            if (!o || o.k !== 'target' || o.hit) return { ok: false, why: 'もう当たっている' };
+            tx = o.x; ty = o.y; tz = o.z;
+          }
         }
       } else if (intent.k === 'blast') {
-        R = RANGE.blast;
+        R = RANGE.blast + (u.rangeUp || 0);
         tx = intent.x; ty = intent.y;
         if (!inside(st, tx, ty)) return { ok: false, why: '外' };
         const sf = surface(st, tx, ty);
@@ -388,7 +611,7 @@
         const b = blastSet(st, tx, ty);
         if (!b.any) return { ok: false, why: 'ここで発破しても、何も起きない' };
       } else {
-        R = RANGE.freeze + (st.up.staff ? 1 : 0);
+        R = RANGE.freeze + (st.up.staff ? 1 : 0) + (u.rangeUp || 0);
         if (intent.ref && intent.ref.u) {
           const t = unitById(st, intent.ref.u);
           if (!t || t.ko || !isFoe(t)) return { ok: false, why: 'ない' };
@@ -493,13 +716,17 @@
 
   // 爆風が届くもの（中心と、上下左右。大玉ならさらに外まで押す）
   function blastSet(st, tx, ty) {
-    const out = { center: null, cracks: [], push: [], any: false };
+    const out = { center: null, cracks: [], push: [], icicles: [], snow: [], any: false };
     const cu = unitAt(st, tx, ty);
     if (cu && isFoe(cu)) { out.center = cu; out.any = true; }
     const cells = [[tx, ty, -1]].concat(DIRS.map(([dx, dy], d) => [tx + dx, ty + dy, d]));
     for (const [x, y, d] of cells) {
       if (!inside(st, x, y)) continue;
       for (const o of st.objs) if (!o.gone && o.k === 'crack' && o.x === x && o.y === y) { out.cracks.push(o); out.any = true; }
+      // つらら：爆心か上下左右なら落ちる（下に仲間がいれば落とさない）。深い雪は飛んで土になる（v0.3）
+      for (const o of st.objs) if (!o.gone && o.k === 'icicle' && o.x === x && o.y === y) { const un = unitAt(st, x, y); if (!un || isFoe(un)) { out.icicles.push(o); out.any = true; } }
+      // 雪だけでは「何か起きる」に数えない（ほかの物を吹き飛ばすついでに、雪も飛ぶ）
+      if (st.t[idx(st, x, y)] === 'n' && !st.objs.some(o => !o.gone && o.x === x && o.y === y && TOPS.includes(o.k))) out.snow.push([x, y]);
       if (d < 0) continue;
       const u = unitAt(st, x, y);
       if (u && isFoe(u) && !(ENEMY[u.k].swim && !(u.frozen > 0))) { out.push.push({ ref: { u: u.id }, dir: d }); out.any = true; continue; }
@@ -525,12 +752,21 @@
         st.stats.steps += xyz.length - 1;
       } else {
         // ついてくる仲間は、この行動で動く物・敵の通り道と行き先の升に止まらない（05 1.6）
-        partyWalk(st, u, p.path, evs, p.intent.k !== 'move' ? actionCells(st, p) : null);
+        partyWalk(st, u, p.path, evs, p.intent.k !== 'move' ? actionCells(st, p) : null, p.intent.k === 'waft' && p.intent.ref && p.intent.ref.u ? p.intent.ref.u : null);
         const ce = evs.find(e => e.k === 'combat');
         if (ce) {
           if (p.intent.k !== 'move') ce.cancel = { who: u.id, verb: VERB[p.intent.k] || '行動' };
           postCheck(st, evs, before, null); return evs;
         }
+      }
+    } else if (!combat && p.intent.k !== 'move') {
+      // 歩かずに働きかけるときも、動く物の行き先・つららの下にいる仲間はどく（v0.3）
+      const av = actionCells(st, p);
+      const keep = p.intent.k === 'waft' && p.intent.ref && p.intent.ref.u ? p.intent.ref.u : null;
+      if (heroes(st).some(h => h !== u && h.id !== keep && !h.ko && !h.fixed && av.has(idx(st, h.x, h.y)))) {
+        partyWalk(st, u, [idx(st, u.x, u.y)], evs, av, keep);
+        const ce = evs.find(e => e.k === 'combat');
+        if (ce) { ce.cancel = { who: u.id, verb: VERB[p.intent.k] || '行動' }; postCheck(st, evs, before, null); return evs; }
       }
     }
     const I = p.intent;
@@ -540,11 +776,13 @@
       postCheck(st, evs, before, null);
       return evs;
     }
-    const tp = I.k === 'push' ? objOrUnitPos(st, I.ref) : [p.tx, p.ty];
+    const tp = I.k === 'push' || I.k === 'pull' || I.k === 'waft' ? objOrUnitPos(st, I.ref) : [p.tx, p.ty];
     u.face = faceTo(u.x, u.y, tp[0], tp[1], u.face);
     const credit = { who: [u.id], text: '', kills: 0, combo: false, big: 0 };
     st.stats.acts[u.id] = (st.stats.acts[u.id] || 0) + 1;
     if (I.k === 'push') doPush(st, u, I.ref, I.dir, evs, credit);
+    else if (I.k === 'pull') doPull(st, u, I, evs, credit, p);
+    else if (I.k === 'waft') doWaft(st, u, I, evs, credit, p);
     else if (I.k === 'shoot') doShoot(st, u, I.ref, evs, credit);
     else if (I.k === 'rope') doRope(st, u, I.o, evs, credit);
     else if (I.k === 'freeze') doFreeze(st, u, I, evs, credit, p);
@@ -554,7 +792,7 @@
     return evs;
   }
 
-  const VERB = { push: '押す', shoot: '射る', rope: '鉤縄で渡る', freeze: '凍らせる', blast: '発破' };
+  const VERB = { push: '押す', shoot: '射る', rope: '鉤縄で渡る', freeze: '凍らせる', blast: '発破', pull: '引く', waft: 'あおぐ' };
   function objOrUnitPos(st, ref) {
     const e = ref.u ? unitById(st, ref.u) : objById(st, ref.o);
     return [e.x, e.y];
@@ -583,6 +821,9 @@
       if (I.k === 'push') doPush(c, u, I.ref, I.dir, evs, credit);
       else if (I.k === 'blast') doBlast(c, u, I, evs, credit);
       else if (I.k === 'freeze') doFreeze(c, u, I, evs, credit, p);
+      else if (I.k === 'pull') doPull(c, u, I, evs, credit, p);
+      else if (I.k === 'waft') doWaft(c, u, I, evs, credit, p);
+      else if (I.k === 'shoot' && I.ref && I.ref.o) { const o = objById(c, I.ref.o); if (o && o.k === 'icicle') out.add(idx(st, o.x, o.y)); return out; }
       else return out;
       const walk = (l) => { for (const e of l) {
         if (e.k === 'group') walk(e.evs);
@@ -590,6 +831,8 @@
         else if (e.k === 'fall' && e.to) out.add(idx(st, e.to[0], e.to[1]));
         else if (e.k === 'topple') for (const b of e.beams) out.add(idx(st, b.x, b.y));
         else if (e.k === 'iceblock' && e.o) out.add(idx(st, e.o.x, e.o.y));
+        else if (e.k === 'icicle') out.add(idx(st, e.x, e.y));
+        else if (e.k === 'waft' && e.to) out.add(idx(st, e.to[0], e.to[1]));
       } };
       walk(evs);
     } catch (err) { /* 試せなければ、ふつうに歩く */ }
@@ -597,7 +840,7 @@
   }
 
   // 探索中の移動：選んだ一人が先頭で歩き、仲間がついてくる
-  function partyWalk(st, lead, path, evs, avoid) {
+  function partyWalk(st, lead, path, evs, avoid, keep) {
     const W = st.W;
     let cut = path.length;
     for (let k = 1; k < path.length; k++) {
@@ -611,10 +854,10 @@
     lead.face = path.length > 1 ? faceTo(xyz[xyz.length - 2][0], xyz[xyz.length - 2][1], xyz[xyz.length - 1][0], xyz[xyz.length - 1][1], lead.face) : lead.face;
     lead.x = end % W; lead.y = (end / W) | 0; lead.z = standZ(st, lead.x, lead.y, lead);
     st.stats.steps += path.length - 1;
-    const others = heroes(st).filter(h => h !== lead && !h.ko && !h.fixed);
+    const others = heroes(st).filter(h => h !== lead && !h.ko && !h.fixed && h.id !== keep);
     const taken = new Set([end]);
     for (const o of st.objs) if (!o.gone && (PUSHABLE.includes(o.k) || o.k === 'anchor' || o.k === 'chest')) taken.add(idx(st, o.x, o.y));
-    for (const u of st.units) if (!u.ko && (isNpc(u) || u.fixed)) taken.add(idx(st, u.x, u.y));
+    for (const u of st.units) if (!u.ko && (isNpc(u) || u.fixed || u.id === keep)) taken.add(idx(st, u.x, u.y));
     if (avoid) for (const i of avoid) taken.add(i);
     const trail = path.slice(0, -1).reverse();
     const goals = [];
@@ -660,7 +903,27 @@
     for (const h of heroes(st)) { h.acted = false; h.mv = h.fixed ? 0 : movOf(h); }
     evs.push({ k: 'combat', grp });
     const def = st.fightSay && st.fightSay[grp];
-    if (def) for (const s of def) { const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
+    if (def) for (const s of def) { if (!sayOk(st, s[2])) continue; const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
+  }
+  // 台詞を出す（話し手がその編成にいない行は出さない。語り narr と、地図にいる人はそのまま）
+  function sayLines(st, list, evs) {
+    for (const s of list || []) {
+      if (!sayOk(st, s[2])) continue;
+      const who = speaker(st, s[0]);
+      if (!who) continue;
+      if (who !== 'narr' && HERO[who] && !unitById(st, who)) continue;
+      evs.push({ k: 'say', who, text: sayText(s, who) });
+    }
+  }
+  // 台詞の出る条件（3つめの要素）。ifObj：その物がまだある／ifDown・ifUp：はね橋が下りている・上がっている（v0.3）
+  function sayOk(st, c) {
+    if (!c) return true;
+    if (c.ifHero && !unitById(st, c.ifHero)) return false;
+    if (c.ifObj) { const o = objById(st, c.ifObj); if (!o || o.gone) return false; }
+    if (c.ifDown && !(objById(st, c.ifDown) || {}).down) return false;
+    if (c.ifUp && (objById(st, c.ifUp) || {}).down) return false;
+    if (c.ifNotReach) { const i = idx(st, c.ifNotReach[0], c.ifNotReach[1]); if (partyReach(st).has(i)) return false; }
+    return true;
   }
   // 'gard|tobi' のように書いた話し手は、編成にいる最初の一人（だれもいなければ出さない）
   function speaker(st, who) {
@@ -688,7 +951,7 @@
         if (o.coins) st.coins += o.coins;
         st.found.push(o.id);
         evs.push({ k: 'collect', o: o.id, item: o.item, coins: o.coins || 0, by: u.id, x: o.x, y: o.y, z: o.z });
-        if (o.say) for (const s of o.say) evs.push({ k: 'say', who: s[0], text: s[1] });
+        if (o.say) sayLines(st, o.say, evs);
       }
     }
   }
@@ -698,10 +961,15 @@
       if (st.said[tr.id]) continue;
       if (tr.flag && !st.flags[tr.flag]) continue;
       if (tr.need && !tr.need.some(v => heroWith(st, v))) continue;
-      const hit = heroes(st).some(h => !h.ko && !h.fixed && h.x >= tr.r[0] && h.y >= tr.r[1] && h.x <= tr.r[2] && h.y <= tr.r[3]);
+      if (tr.up && !st.up[tr.up]) continue;
+      if (tr.notDown && (objById(st, tr.notDown) || {}).down) continue;
+      // link：縄の道の片はしが、この範囲にある（v0.3）／who：その人が範囲に入ったとき
+      if (tr.link && !st.links.some(L => L.k === 'rope' && [L.a, L.b].some(c => c[0] >= tr.link[0] && c[1] >= tr.link[1] && c[0] <= tr.link[2] && c[1] <= tr.link[3]))) continue;
+      if (tr.flagNot && st.flags[tr.flagNot]) continue;
+      const hit = !tr.r || heroes(st).some(h => !h.ko && !h.fixed && (!tr.who || h.id === tr.who) && h.x >= tr.r[0] && h.y >= tr.r[1] && h.x <= tr.r[2] && h.y <= tr.r[3]);
       if (!hit) continue;
       st.said[tr.id] = 1;
-      for (const s of tr.say || []) evs.push({ k: 'say', who: s[0], text: s[1] });
+      sayLines(st, tr.say, evs);
       if (tr.on) runOn(st, tr.on, evs, null);
     }
   }
@@ -711,7 +979,8 @@
     if (u.ko || n <= 0) return;
     if (isFoe(u) && ENEMY[u.k].armor && why !== 'enemy') {
       if (!(u.flipped > 0)) {
-        if (why === 'fall' || why === 'crush' || why === 'rock') { flip(st, u, evs, credit); n = 2; }
+        // drop：つらら・あおいだ物が上から落ちて当たった（05 2.1・3.2）
+        if (why === 'fall' || why === 'crush' || why === 'rock' || why === 'drop') { flip(st, u, evs, credit); n = 2; }
         // 甲羅のすきまに刺さる高所の矢は、傷1に固定（05 1.2。風切りの弓で2）
         else if (why === 'arrowHigh') { if (credit) credit.gap = true; n = 1 + (st.up.bow2 ? 1 : 0); }
         else { evs.push({ k: 'clang', id: u.id }); if (credit) credit.clang = (credit.clang || 0) + 1; return; }
@@ -775,7 +1044,7 @@
     const slip = (isU && ent.frozen > 0) || ent.k === 'iceblock';
     const roll = ent.k === 'boulder';
     if (slip && (ent.frozenBy || ent.by) === 'sena') addWho(credit, 'sena');
-    if (isU) hurt(st, ent, 1, opt.why || 'push', evs, credit);
+    if (isU && !opt.noHit) hurt(st, ent, 1, opt.why || 'push', evs, credit);
     if (isU && ent.ko) return { end: 'ko', path: [[ent.x, ent.y, ent.z]], moved: 0 };
     let x = ent.x, y = ent.y, z = ent.z;
     const path = [[x, y, z]];
@@ -787,6 +1056,8 @@
     const maxPush = opt.dist || 1;
     while (steps++ < 40) {
       const nx = x + dx, ny = y + dy;
+      // 引き鉤：リコのとなりまで来たら止まる（リコは傷を受けない）
+      if (opt.stopAt && nx === opt.stopAt[0] && ny === opt.stopAt[1]) { end = 'stop'; break; }
       const s = surface(st, nx, ny, isU ? null : ent);
       const occ = unitAt(st, nx, ny, isU ? ent : null);
       if (flyer) {
@@ -890,8 +1161,10 @@
   }
   function addWho(credit, w) { if (credit && credit.who.indexOf(w) < 0) { credit.who.push(w); credit.combo = true; } }
 
-  function finishPushCaption(st, ent, isU, r, credit) {
+  // how: 'push'（押す・既定）／'pull'（引き鉤）
+  function finishPushCaption(st, ent, isU, r, credit, how) {
     const name = isU ? ENEMY[ent.k].name : objName(ent);
+    const pull = how === 'pull';
     const end = r.end, moved = r.moved, iceUsed = r.iceUsed;
     let t = '';
     if (end === 'ko') t = name + 'を押して、倒した';
@@ -905,9 +1178,9 @@
     else if (end === 'fall') t = ent.ko ? name + 'は段の下へ落ちて倒れた' : (credit.flip ? name + 'は段の下へ落ちて、ひっくり返った！' : name + 'は段の下へ落ちた');
     else if (end === 'bump') t = moved ? name + 'はすべって、ぶつかった' : name + 'はぶつかって止まった';
     else if (end === 'plate') t = credit.plateLabel || (name + 'が床の仕掛けにのった');
-    else if (!isU && r.path && r.path.length > 1 && r.path[0][2] > ent.z) t = name + 'が段の下へ落ちて、足場になった';
+    else if (!isU && r.path && r.path.length > 1 && r.path[0][2] > ent.z) t = (pull ? '引き鉤で引くと、' : '') + name + 'が段の下へ落ちて、足場になった';
     else if (iceUsed && moved > 1) t = name + 'は氷の上をすべっていった';
-    else t = name + 'を押した';
+    else t = name + (pull ? 'を引きよせた' : 'を押した');
     const rc = rollCaption(st, ent, isU, r, '');
     if (rc) t = rc;
     if (isU && ent.ko && end === 'bump') t = name + 'はぶつかって倒れた';
@@ -931,7 +1204,7 @@
   }
 
   function objName(o) {
-    return { crate: '木箱', block: '石のブロック', iceblock: '氷のかたまり', boulder: '大岩', pillar: '石柱', rubble: 'がれき' }[o.k] || '物';
+    return { crate: '木箱', block: '石のブロック', iceblock: '氷のかたまり', boulder: '大岩', pillar: '石柱', rubble: 'がれき', icicle: 'つらら', lever: 'レバー', chime: '風鳴り石' }[o.k] || '物';
   }
 
   function sink(st, o, evs, credit) {
@@ -1010,6 +1283,14 @@
       if (o.on) runOn(st, o.on, evs, credit);
       if (o.label) credit.crackLabel = o.label;
     }
+    // つらら（爆心か上下左右）が落ちる
+    const icTexts = [];
+    for (const o of set.icicles) {
+      if (o.gone) continue;
+      const un = unitAt(st, o.x, o.y);
+      if (un && !isFoe(un)) continue;
+      icTexts.push(icicleCaption(dropIcicle(st, o, evs, credit)));
+    }
     // 外側から順に押す（ぶつかり合いを減らす）
     const list = set.push.slice();
     for (const it of list) {
@@ -1022,6 +1303,9 @@
       if (rc) rolled = rc;
       if (isU && ent.ko) felled++;
     }
+    // 深い雪は吹き飛んで、土になる（05 3.1）
+    const snow = set.snow.filter(([x, y]) => st.t[idx(st, x, y)] === 'n');
+    if (snow.length) { for (const [x, y] of snow) st.t[idx(st, x, y)] = 'd'; evs.push({ k: 'snowClear', cells: snow }); }
     st.stats.blasts = (st.stats.blasts || 0) + 1;
     let tx = '';
     if (shattered && credit.crackLabel) tx = credit.crackLabel;
@@ -1031,10 +1315,12 @@
     else if (flung === 1 && OUTCOME[flungEnds[0]]) tx = (tx ? tx + '。' : '') + '爆風で ' + flungNames[0] + 'を吹き飛ばした' + OUTCOME[flungEnds[0]];
     else if (flung) tx = (tx ? tx + '。' : '') + '爆風で ' + (flung === 1 ? flungNames[0] + 'を' : flung + 'つを') + '吹き飛ばした';
     if (rolled) tx = rolled;
+    if (icTexts.length) tx = (tx && !credit.kills ? tx + '。' : '') + icTexts.join('。');
     if (credit.plateLabel) tx = (tx ? tx + '。' : '') + credit.plateLabel;
     if (credit.sinkLabel) tx = (tx ? tx + '。' : '') + credit.sinkLabel;
     if (credit.flip) tx += flipNote(credit);
     if (credit.clang && !credit.flip && !credit.kills && !flung) tx = '甲羅にはじかれた。落とすか、ひっくり返せば効く';
+    if (!tx && snow.length) tx = '深い雪が吹き飛んで、土が出た';
     if (!tx) tx = set.center ? ENEMY[set.center.k].name + 'に発破が命中した' : '発破した';
     credit.text = tx;
     credit.blast = true;
@@ -1058,6 +1344,14 @@
       return;
     }
     const o = objById(st, ref.o);
+    if (o.k === 'icicle') {
+      const hz = o.z + ICICLE_Z;
+      evs.push({ k: 'act', id: r.id, verb: 'shoot', tx: o.x, ty: o.y, tz: hz });
+      evs.push({ k: 'arrow', from: [r.x, r.y, r.z], to: [o.x, o.y, hz], hit: true });
+      const res = dropIcicle(st, o, evs, credit);
+      credit.text = icicleCaption(res);
+      return;
+    }
     evs.push({ k: 'act', id: r.id, verb: 'shoot', tx: o.x, ty: o.y, tz: o.z });
     evs.push({ k: 'arrow', from: [r.x, r.y, r.z], to: [o.x, o.y, o.z], hit: true, target: o.id });
     o.hit = true;
@@ -1079,6 +1373,210 @@
     evs.push({ k: 'zip', id: r.id, from, to: [r.x, r.y, r.z] });
     credit.text = '鉄の輪に鉤縄をかけて渡った。縄は仲間の道になる';
     collectAt(st, r, evs);
+    if (st.mode === 'explore') triggersAt(st, evs);
+  }
+
+  // ---------- リコ：引き鉤（05 2.2） ----------
+  function doPull(st, r, I, evs, credit, p) {
+    const ref = I.ref;
+    const ent = ref.u ? unitById(st, ref.u) : objById(st, ref.o);
+    const tz = ref.u ? ent.z + 1 : ent.z + (OBJ_H[ent.k] || 1) * 0.6;
+    evs.push({ k: 'act', id: r.id, verb: 'pull', tx: ent.x, ty: ent.y, tz: ent.z });
+    evs.push({ k: 'hook', from: [r.x, r.y, r.z], to: [ent.x, ent.y, tz] });
+    st.stats.pulls = (st.stats.pulls || 0) + 1;
+    if (ent.k === 'lever') {
+      ent.done = true;
+      evs.push({ k: 'lever', o: ent.id });
+      credit.text = ent.label || 'レバーを引いた';
+      runOn(st, ent.on, evs, credit);
+      for (const s of ent.say || []) evs.push({ k: 'say', who: s[0], text: s[1] });
+      return;
+    }
+    const dir = p && p.pullDir !== undefined ? p.pullDir : faceTo(ent.x, ent.y, r.x, r.y, 0);
+    const res = pushEntity(st, ent, !!ref.u, dir, evs, credit, { dist: PULL_MOVE, why: 'pull', noHit: true, stopAt: [r.x, r.y] });
+    finishPushCaption(st, ent, !!ref.u, res, credit, 'pull');
+  }
+
+  // ---------- ナギ：あおぐ（05 2.1） ----------
+  function doWaft(st, n, I, evs, credit, p) {
+    const ref = I.ref;
+    const isU = !!ref.u;
+    const ent = isU ? unitById(st, ref.u) : objById(st, ref.o);
+    st.stats.wafts = (st.stats.wafts || 0) + 1;
+    if (!isU && ent.k === 'chime') {
+      // 風鳴り石：となりからあおぐと鳴る（一度きり）
+      evs.push({ k: 'act', id: n.id, verb: 'waft', tx: ent.x, ty: ent.y, tz: ent.z });
+      evs.push({ k: 'gust', from: [n.x, n.y, n.z], to: [ent.x, ent.y, ent.z], dir: faceTo(n.x, n.y, ent.x, ent.y, 0) });
+      ent.rung = true;
+      evs.push({ k: 'chime', o: ent.id, x: ent.x, y: ent.y, z: ent.z });
+      credit.text = ent.label || '風鳴り石が鳴った';
+      runOn(st, ent.on, evs, credit);
+      return;
+    }
+    const wi = waftInfo(st, ref, n.id);
+    const dir = I.dir;
+    const name = isU ? (isHero(ent) ? HERO[ent.k].name : ENEMY[ent.k].name) : objName(ent);
+    evs.push({ k: 'act', id: n.id, verb: 'waft', tx: ent.x, ty: ent.y, tz: ent.z, dir });
+    evs.push({ k: 'gust', from: [n.x, n.y, n.z], to: [ent.x, ent.y, ent.z], dir });
+    if (isU && isHero(ent)) addWho(credit, ent.id);
+    // 凍った重い敵：浮かずに、その向きへ1升すべりだして、止まるまですべる（05 1.5）
+    if (wi.slide) {
+      if (ent.frozenBy === 'sena') addWho(credit, 'sena');
+      const r = pushEntity(st, ent, true, dir, evs, credit, { noHit: true, why: 'waft' });
+      finishPushCaption(st, ent, true, r, credit, 'push');
+      credit.text = credit.text.replace('を押した', 'は風に押されて、すべりだした');
+      return;
+    }
+    // 飛ぶ敵：2D 升まで、ぶつかるまで流される。壁・高い物にぶつかれば傷1。地図の外へ出れば飛び去る
+    if (wi.flyer) {
+      const D2 = waftDist(st) * 2;
+      const [dx, dy] = DIRS[dir];
+      let x = ent.x, y = ent.y, end = 'stop';
+      const path = [[x, y, ent.z]];
+      for (let k = 0; k < D2; k++) {
+        const nx = x + dx, ny = y + dy;
+        if (!inside(st, nx, ny)) { end = 'away'; path.push([nx, ny, ent.z + 1]); break; }
+        const s = surface(st, nx, ny);
+        if (s.wall || (s.block && s.blockTop > ent.z + 1) || unitAt(st, nx, ny, ent) || (!s.void && !s.water && s.z > ent.z + 1)) { end = 'bump'; break; }
+        x = nx; y = ny; path.push([x, y, ent.z]);
+      }
+      if (path.length > 1) evs.push({ k: 'slide', ref: { u: ent.id }, path, slip: true, wind: true });
+      if (end === 'away') {
+        ent.ko = true; ent.gone = true;
+        evs.push({ k: 'ko', id: ent.id, how: 'away' });
+        st.stats.foeKo.push({ k: ent.k, how: 'away' });
+        credit.kills++; st.stats.kills[credit.who[0]] = (st.stats.kills[credit.who[0]] || 0) + 1;
+        st.stats.waftKo = (st.stats.waftKo || []).concat([{ k: ent.k, how: 'away' }]);
+        credit.text = name + 'は風に流されて、飛び去った';
+        return;
+      }
+      ent.x = x; ent.y = y;
+      if (end === 'bump') { evs.push({ k: 'bump', ref: { u: ent.id }, dir, x, y, z: ent.z }); hurt(st, ent, 1, 'bump', evs, credit); }
+      credit.text = ent.ko ? name + 'は風に流されて、ぶつかって倒れた' : end === 'bump' ? name + 'は風に流されて、ぶつかった' : name + 'は風に流された';
+      return;
+    }
+    const D = waftDist(st);
+    const dest = waftDest(st, ent, wi.kind, dir, D, [n.x, n.y]);
+    if (!dest.land) { credit.text = 'あおげなかった（' + dest.why + '）'; return; }
+    const from = [ent.x, ent.y, ent.z];
+    const z0 = ent.z;
+    const crossed = (() => { const [dx, dy] = DIRS[dir]; let v = '', w = ''; for (let k = 1; k < dest.d; k++) { const s = surface(st, ent.x + dx * k, ent.y + dy * k, isU ? null : ent); if (s.void) v = '谷'; else if (s.water) w = '水'; } return v || w; })();
+    const toZ = dest.land === 'lost' || dest.land === 'void' ? z0 - 14 : dest.land === 'hit' ? dest.foe.z + 1 : dest.z;
+    const ref2 = isU ? { u: ent.id } : { o: ent.id };
+    evs.push({ k: 'waft', ref: ref2, from, to: [dest.x, dest.y, toZ], land: dest.land, arc: 1.4 + Math.max(0, (toZ - z0)) * 0.6 + (dest.d - 1) * 0.3 });
+    const up = dest.z !== undefined && dest.z > z0 ? dest.z - z0 : 0;
+    const how = up ? up + '段上へ' : crossed ? crossed + 'を越えて' : dest.d + '升先へ';
+    // ---- 仲間 ----
+    if (wi.kind === 'h') {
+      ent.x = dest.x; ent.y = dest.y; ent.z = dest.z;
+      credit.text = 'ナギの風にのって、' + name + 'が' + (crossed ? crossed + 'を越えた' : up ? up + '段上へ下りた' : 'ふわりと' + dest.d + '升先へ下りた');
+      collectAt(st, ent, evs);
+      if (st.mode === 'explore') triggersAt(st, evs);
+      return;
+    }
+    // ---- 敵 ----
+    if (wi.kind === 'e') {
+      if (ent.frozen > 0 && ent.frozenBy === 'sena') addWho(credit, 'sena');
+      if (dest.land === 'void') {
+        ent.x = dest.x; ent.y = dest.y;
+        ko(st, ent, 'void', evs, credit); evs.push({ k: 'lost', ref: ref2 });
+        noteWaftKo(st, ent, 'void', evs);
+        credit.text = name + 'を' + (crossed ? crossed + 'の上へ' : '') + 'あおいで、谷へ落とした';
+        return;
+      }
+      if (dest.land === 'drown') {
+        ent.x = dest.x; ent.y = dest.y; ent.z = dest.z;
+        ko(st, ent, 'drown', evs, credit);
+        noteWaftKo(st, ent, 'drown', evs);
+        credit.text = name + 'をあおいで、水に沈めた';
+        return;
+      }
+      ent.x = dest.x; ent.y = dest.y; ent.z = dest.z;
+      const drop = z0 - dest.z;
+      // 2段以上低い升へ下りれば落下の傷。凍っていれば+1（落差がなくても1。05 2.1）
+      const dmg = fallDmg(drop) + (ent.frozen > 0 ? 1 : 0);
+      if (dmg) hurt(st, ent, dmg, 'fall', evs, credit);
+      if (ent.ko) { noteWaftKo(st, ent, 'fall', evs); credit.text = name + 'をあおいで、' + (drop >= 2 ? '段の下へ落とした。倒れた' : '倒した'); return; }
+      if (dest.land === 'ice') { const r = pushEntity(st, ent, true, dir, evs, credit, { noHit: true, why: 'waft' }); if (ent.ko) noteWaftKo(st, ent, r.end, evs); credit.text = name + 'をあおぐと、氷の上をすべっていった' + (r.end === 'void' ? '。谷へ落ちた' : r.end === 'drown' ? '。水に沈んだ' : ''); return; }
+      credit.text = name + 'を' + how + '飛ばした' + (drop >= 2 ? '（落下の傷 ' + dmg + '）' : dmg ? '（凍っていて、砕けやすい。傷 ' + dmg + '）' : '');
+      return;
+    }
+    // ---- 物 ----
+    if (dest.land === 'lost') { ent.x = dest.x; ent.y = dest.y; ent.gone = true; evs.push({ k: 'lost', ref: ref2 }); credit.text = name + 'は谷へ落ちていった'; return; }
+    if (dest.land === 'sink') { ent.x = dest.x; ent.y = dest.y; ent.z = dest.z; sink(st, ent, evs, credit); credit.text = credit.sinkLabel || name + (ent.k === 'iceblock' ? 'が水に落ちて、氷の床になった' : 'が水に沈んで、飛び石になった'); return; }
+    if (dest.land === 'hit') {
+      const foe = dest.foe, fname = ENEMY[foe.k].name;
+      hurt(st, foe, 3, 'drop', evs, credit);
+      if (foe.ko) {
+        const s = surface(st, dest.x, dest.y, ent);
+        ent.x = dest.x; ent.y = dest.y; ent.z = s.z;
+        evs.push({ k: 'fall', ref: ref2, from: [dest.x, dest.y, toZ], to: [dest.x, dest.y, s.z], drop: Math.max(0, toZ - s.z) });
+        afterLand(st, ent, evs, credit);
+        credit.text = name + 'が' + fname + 'に当たった。倒れた';
+      } else {
+        ent.gone = true;
+        evs.push({ k: 'break', ref: ref2, x: dest.x, y: dest.y, z: toZ });
+        credit.text = name + 'が' + fname + 'に当たった（傷3）。' + name + 'は砕けた' + (credit.flip ? '（ひっくり返った！）' : '');
+      }
+      return;
+    }
+    ent.x = dest.x; ent.y = dest.y; ent.z = dest.z;
+    if (dest.land === 'ice') {
+      const r = pushEntity(st, ent, false, dir, evs, credit, { noHit: true, why: 'waft' });
+      credit.text = name + 'は氷の上に下りて、すべっていった' + (r.end === 'sink' ? '。水に沈んで、飛び石になった' : r.end === 'void' ? '。谷へ落ちていった' : '');
+      if (r.end !== 'void' && r.end !== 'sink') afterLand(st, ent, evs, credit);
+      return;
+    }
+    afterLand(st, ent, evs, credit);
+    credit.text = credit.plateLabel || (name + 'を' + how + '運んだ' + (up ? '（あおぐと2段上まで上がる）' : ''));
+  }
+  // あおいで倒した記録（印 m8①）と、はじめて雪狼を谷へ落としたときのひとこと
+  function noteWaftKo(st, ent, how, evs) {
+    st.stats.waftKo = (st.stats.waftKo || []).concat([{ k: ent.k, how }]);
+    if (ent.k === 'wolf' && (how === 'void' || how === 'drown') && st.waftSay && !st.said.waftWolf) { st.said.waftWolf = 1; sayLines(st, st.waftSay, evs); }
+  }
+
+  // ---------- つらら（05 3.2） ----------
+  // 落ちると：その升の敵に傷3（上から落ちた物）。敵がいない・倒れた → 水なら氷の飛び石、床なら氷のかたまり。敵が生き残れば砕ける
+  function dropIcicle(st, o, evs, credit) {
+    o.gone = true;
+    const i = idx(st, o.x, o.y);
+    const sf = surface(st, o.x, o.y);
+    const e = unitAt(st, o.x, o.y);
+    const foe = e && isFoe(e) ? e : null;
+    const z1 = foe ? foe.z + 1 : sf.void ? o.z - 14 : sf.water ? st.h[i] : sf.z;
+    evs.push({ k: 'icicle', o: o.id, x: o.x, y: o.y, z0: o.z + ICICLE_Z, z1 });
+    st.stats.icicles = (st.stats.icicles || 0) + 1;
+    const sleeping = foe && !foe.active && st.mode === 'explore';
+    let res = null;
+    if (foe) {
+      hurt(st, foe, 3, 'drop', evs, credit);
+      if (foe.ko) st.stats.icicleKo = (st.stats.icicleKo || 0) + 1;
+      if (!foe.ko) { res = 'shatter'; evs.push({ k: 'iceShatter', x: o.x, y: o.y, z: foe.z + 1 }); }
+    }
+    if (!res) {
+      if (sf.void) res = 'lost';
+      else if (sf.water) { st.t[i] = 'i'; st.by[i] = 'riko'; evs.push({ k: 'freezeCells', cells: [[o.x, o.y]], by: 'riko' }); res = 'floe'; }
+      else if (sf.stand && !sf.block) {
+        const b = { id: 'o' + (st.seq++), k: 'iceblock', x: o.x, y: o.y, z: sf.z, by: 'riko' };
+        st.objs.push(b); evs.push({ k: 'iceblock', o: clone(b) });
+        afterLand(st, b, evs, credit);
+        res = 'block';
+      } else { res = 'shatter'; evs.push({ k: 'iceShatter', x: o.x, y: o.y, z: sf.z }); }
+    }
+    if (res !== 'shatter' && res !== 'lost') for (const s of o.say || []) { const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
+    // 眠っている敵に当たれば、その組の戦いが始まる
+    if (sleeping && st.mode === 'explore') startCombat(st, foe.grp, evs);
+    return { res, foe, name: foe ? ENEMY[foe.k].name : '' };
+  }
+  function icicleCaption(r) {
+    const left = r.res === 'block' ? '（氷のかたまりが残った）' : r.res === 'floe' ? '（氷の飛び石が残った）' : '';
+    if (r.foe && r.foe.ko) return 'つららが' + r.name + 'に当たった。倒れた' + left;
+    if (r.foe) return 'つららが' + r.name + 'に当たった（傷3）。つららは砕けた' + (r.foe.flipped > 0 ? '（ひっくり返った！）' : '');
+    if (r.res === 'floe') return 'つららが落ちて、氷の飛び石になった';
+    if (r.res === 'block') return 'つららが落ちて、氷のかたまりになった（のれる・足場になる）';
+    if (r.res === 'lost') return 'つららは谷へ落ちていった';
+    return 'つららが落ちて、砕けた';
   }
 
   // ---------- セナ：凍らせる ----------
@@ -1179,7 +1677,13 @@
       else if (op === 'open' && o) { o.open = true; evs.push({ k: 'open', o: o.id }); }
       else if (op === 'link') { const L = st.links.find(l => l.id === id); if (L) { L.hidden = false; evs.push({ k: 'linkShow', id }); } }
       else if (op === 'flag') { st.flags[id] = true; evs.push({ k: 'flag', id }); }
-      else if (op === 'rune') { st.flags[id] = true; evs.push({ k: 'rune', id, n: runeCount(st) }); runeCheck(st, evs); }
+      else if (op === 'rune') {
+        st.flags[id] = true; const n = runeCount(st);
+        evs.push({ k: 'rune', id, n });
+        const rs = st.runeSay && st.runeSay[n];
+        if (rs && !(st.obj.need && n >= st.obj.need)) sayLines(st, rs.map(q => [q[0], typeof q[1] === 'string' ? q[1].split('{n}').join(String(n)) : q[1], q[2]]), evs);
+        runeCheck(st, evs);
+      }
       else if (op === 'drain') { drain(st, id, evs); }
       else if (op === 'show' && o) { o.hidden = false; evs.push({ k: 'show', o: o.id }); }
       else if (op === 'wake') { if (st.mode === 'explore') startCombat(st, +id, evs); }
@@ -1189,7 +1693,7 @@
   function runeCheck(st, evs) {
     const O = st.obj;
     if (O.k !== 'runes' || st.flags.runesDone) return;
-    if (runeCount(st) >= O.need) { st.flags.runesDone = true; if (O.on) runOn(st, O.on, evs, null); evs.push({ k: 'runesDone' }); }
+    if (runeCount(st) >= O.need) { st.flags.runesDone = true; if (O.on) runOn(st, O.on, evs, null); evs.push({ k: 'runesDone', label: O.doneLabel || null }); if (O.doneSay) sayLines(st, O.doneSay, evs); }
   }
   function drain(st, id, evs) {
     const cells = [];
@@ -1281,10 +1785,12 @@
         const poi = [];
         for (const o of st.objs) {
           if (o.gone) continue;
-          if (!['chest', 'anchor', 'target', 'fall', 'crystal', 'crack'].includes(o.k)) continue;
+          if (!['chest', 'anchor', 'target', 'fall', 'crystal', 'crack', 'lever', 'icicle', 'chime'].includes(o.k)) continue;
+          if (o.k === 'chime' && o.rung) continue;
           if (o.k === 'chest' && o.open) continue;
           if (o.k === 'target' && o.hit) continue;
           if (o.k === 'crystal' && o.lit) continue;
+          if (o.k === 'lever' && o.done) continue;
           let near = false;
           if (o.k === 'chest') near = after.has(idx(st, o.x, o.y)) && cells.some(c => Math.abs(c[0] - o.x) + Math.abs(c[1] - o.y) <= 2);
           else if (o.k === 'anchor') near = heroWith(st, 'rope') && cells.some(c => inRange(c[0], c[1], o.x, o.y, st.up.rope2 ? RANGE.rope2 : RANGE.rope)) && !after.has(idx(st, o.x, o.y));
@@ -1292,6 +1798,9 @@
           else if (o.k === 'fall') near = heroWith(st, 'freeze') && !o.frozen && cells.some(c => inRange(c[0], c[1], o.bx, o.by, RANGE.freeze));
           else if (o.k === 'crystal') near = heroWith(st, 'freeze') && cells.some(c => inRange(c[0], c[1], o.x, o.y, RANGE.freeze));
           else if (o.k === 'crack') near = heroWith(st, 'blast') && cells.some(c => inRange(c[0], c[1], o.x, o.y, RANGE.blast));
+          else if (o.k === 'lever') near = heroWith(st, 'pull') && cells.some(c => (c[0] === o.x || c[1] === o.y) && Math.abs(c[0] - o.x) + Math.abs(c[1] - o.y) <= PULL_MAX);
+          else if (o.k === 'icicle') near = cells.some(c => inRange(c[0], c[1], o.x, o.y, RANGE.shoot));
+          else if (o.k === 'chime') near = heroWith(st, 'waft') && cells.some(c => Math.abs(c[0] - o.x) + Math.abs(c[1] - o.y) === 1);
           if (near) poi.push(o.id);
         }
         evs.push({ k: 'bloom', cells, poi, who: credit ? credit.who.slice() : [] });
@@ -1319,7 +1828,7 @@
     evs.push({ k: 'win', grp: st.grp, turns: st.stats.fightLen[st.grp] });
     st.flags['won' + st.grp] = true;
     const def = st.winSay && st.winSay[st.grp];
-    if (def) for (const s of def) evs.push({ k: 'say', who: s[0], text: s[1] });
+    if (def) for (const s of def) { if (!sayOk(st, s[2])) continue; const who = speaker(st, s[0]); if (who && (who === 'narr' || unitById(st, who))) evs.push({ k: 'say', who, text: sayText(s, who) }); }
     st.grp = 0;
     triggersAt(st, evs);
   }
@@ -1365,7 +1874,7 @@
         ids.push(clone(u));
       }
       evs.push({ k: 'spawn', units: ids, text: w.text || '' });
-      if (w.say) for (const s of w.say) evs.push({ k: 'say', who: s[0], text: s[1] });
+      if (w.say) sayLines(st, w.say, evs);
     }
   }
   function nextWave(st) {
@@ -1453,7 +1962,9 @@
           if (E.ranged) ok = inRange(x, y, h.x, h.y, E.range) && !(x === h.x && y === h.y);
           else ok = Math.abs(x - h.x) + Math.abs(y - h.y) === 1 && Math.abs(zc - h.z) <= 1 + (E.fly ? 2 : 0);
           if (!ok) continue;
-          const dmg = E.atk + (E.ranged && zc >= h.z + 2 ? 1 : 0);
+          // 雪狼の群れ：ねらった相手のとなりに、ほかの雪狼がいれば傷+1（05 4.3）
+          const pack = E.pack && st.units.some(w => w !== e && !w.ko && w.k === e.k && Math.abs(w.x - h.x) + Math.abs(w.y - h.y) === 1) ? E.pack : 0;
+          const dmg = E.atk + (E.ranged && zc >= h.z + 2 ? 1 : 0) + pack;
           const also = [];
           if (E.slam) for (const h2 of hs) if (h2 !== h && Math.abs(x - h2.x) + Math.abs(y - h2.y) === 1 && Math.abs(zc - h2.z) <= 1) also.push({ id: h2.id, dmg: E.atk - 1 });
           let score = dmg * 10 - h.hp - d.c * 0.3 + (E.ranged ? zc * 0.4 : 0) + (dmg >= h.hp ? 6 : 0) + also.length * 8;
@@ -1540,7 +2051,7 @@
     const u = unitById(st, heroId);
     if (!u || u.ko || !isHero(u)) return out;
     const tryP = (intent) => { const p = plan(st, heroId, intent); if (p.ok) out.push(p); };
-    const vs = HERO[u.k].verbs;
+    const vs = verbsOf(st, u.k);
     const active = liveEnemies(st).filter(e => e.active || st.mode === 'explore');
     if (vs.includes('push')) {
       for (const o of st.objs) if (!o.gone && (PUSHABLE.includes(o.k) || o.k === 'pillar')) for (let d = 0; d < 4; d++) tryP({ k: 'push', ref: { o: o.id }, dir: d });
@@ -1548,8 +2059,21 @@
     }
     if (vs.includes('rope')) for (const o of st.objs) if (!o.gone && o.k === 'anchor') tryP({ k: 'rope', o: o.id });
     if (vs.includes('shoot')) {
-      for (const o of st.objs) if (!o.gone && o.k === 'target' && !o.hit) tryP({ k: 'shoot', ref: { o: o.id } });
+      for (const o of st.objs) if (!o.gone && (o.k === 'target' && !o.hit || o.k === 'icicle')) tryP({ k: 'shoot', ref: { o: o.id } });
       for (const e of liveEnemies(st)) if (e.active) tryP({ k: 'shoot', ref: { u: e.id } });
+    }
+    if (vs.includes('waft')) {
+      for (const o of st.objs) if (!o.gone && (WAFTABLE.includes(o.k) || (o.k === 'chime' && !o.rung))) {
+        if (o.k === 'chime') tryP({ k: 'waft', ref: { o: o.id } }); else for (let d = 0; d < 4; d++) tryP({ k: 'waft', ref: { o: o.id }, dir: d });
+      }
+      if (st.mode === 'combat') for (const e of active) for (let d = 0; d < 4; d++) tryP({ k: 'waft', ref: { u: e.id }, dir: d });
+      for (const h of heroes(st)) if (h.id !== heroId && !h.ko) for (let d = 0; d < 4; d++) tryP({ k: 'waft', ref: { u: h.id }, dir: d });
+    }
+    if (vs.includes('pull')) {
+      for (const o of st.objs) if (!o.gone && (PULLABLE.includes(o.k) || (o.k === 'lever' && !o.done))) {
+        if (o.k === 'lever') tryP({ k: 'pull', ref: { o: o.id } }); else for (let d = 0; d < 4; d++) tryP({ k: 'pull', ref: { o: o.id }, dir: d });
+      }
+      for (const e of active) if (st.mode === 'combat') for (let d = 0; d < 4; d++) tryP({ k: 'pull', ref: { u: e.id }, dir: d });
     }
     if (vs.includes('freeze')) {
       const seen = new Set();
@@ -1581,14 +2105,15 @@
       if (e.k === 'flip') out.flips.push(e.id);
       if (e.k === 'shatter') out.shatter.push(e.o);
       if (e.k === 'safe') out.safe.push(e.id);
-      if (e.k === 'slide' || e.k === 'fall') { const key = e.ref.u || e.ref.o; out.moves[key] = e.path ? e.path[e.path.length - 1] : e.to; }
+      if (e.k === 'slide' || e.k === 'fall' || e.k === 'waft') { const key = e.ref.u || e.ref.o; out.moves[key] = e.path ? e.path[e.path.length - 1] : e.to; }
     }
     out.state = c;
     return out;
   }
 
   const api = {
-    DIRS, HERO, COMPANIONS, ENEMY, NPC, RANGE, OBJ_H, PUSHABLE, CHARM_FX, STUCK, movOf, speaker,
+    DIRS, HERO, COMPANIONS, ENEMY, NPC, RANGE, OBJ_H, PUSHABLE, PULLABLE, ICICLE_Z, PULL_MAX, CHARM_FX, STUCK, movOf, speaker,
+    verbsOf, verbLabel, pullInfo, snowCost, waftInfo, waftDest, waftDist, WAFTABLE,
     clone, idx, inside, inRange, create, surface, standZ, canStep, reach, pathTo, partyReach,
     plan, apply, preview, options, intents, endPlayerPhase, startCombat, wakeCheck, triggersAt, objective, nextWave, runeCount,
     unitById, objById, unitAt, heroes, npcs, enemies, liveEnemies, freezeCells, pushInfo, objName, whyNot, isHero, isNpc, isFoe, fly, faceTo,

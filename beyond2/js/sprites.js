@@ -41,6 +41,8 @@
     '5': '#2c2634', '6': '#ff9a2a', // 発破玉・火花
     '7': '#f4d860', '8': '#5a9a6a', '9': '#346a46', '0': '#f6f2e8', // 黄色い髪・緑の服・白い前掛け
     '#': '#6a4a8a', '$': '#c8a070', '%': '#b0b0b8', '&': '#8a6a3a', '@': '#d86a5a', // 濃い紫・麦わら・灰の髪・杖・頬
+    // 第二章（v0.3）：ナギの山吹の羽織・黒髪・白い羽うちわ
+    K: '#f2c14e', C: '#b8862c', N: '#2c1e2a', D: '#f8f4ec', I: '#c8c0b0',
   };
 
   // ---------- 主人公 ----------
@@ -523,6 +525,114 @@
     '.....AAA..........AAA...',
   ];
 
+  // ---------- 第二章（v0.3） ----------
+  // ツル：峠の茶屋のおかみ（赤い手ぬぐい・灰色の髪・白い前掛け）
+  const TURU_F = [
+    '....RRRRRR....',
+    '...RrrrrrrR...',
+    '...R%%%%%%R...',
+    '...%ssssss%...',
+    '...sesSSses...',
+    '....ss@@ss....',
+    '.....ssss.....',
+    '...VV0000VV...',
+    '..VVV0000VVV..',
+    '.ssVV0000VVss.',
+    '.s.VV0000VV.s.',
+    '...VV0000VV...',
+    '...VVV00VVV...',
+    '...VVVVVVVV...',
+    '....BB..BB....',
+    '...BBB..BBB...',
+  ];
+
+  // 風守りナギ：山吹色の袖なしの羽織、白い脚絆、背負うほどの羽うちわ、髪に小さな風車のかんざし（04 2.1）
+  const NAGI_F = [
+    '..r.....DDD...',
+    '.rEr...DDIDD..',
+    '..rNNNNNDDIDD.',
+    '..NNNNNNNDDID.',
+    '..NNNNNNNNDDI.',
+    '..NsesSsesNDD.',
+    '..NssssssSN.b.',
+    '...NsS@Ss...b.',
+    '..KKKKssKKKKb.',
+    '.KCKKKwwKKKCb.',
+    'sC.KKKwwKKK.bs',
+    's..KKKwwKKK...',
+    '...KKbbbbKK...',
+    '...CKKwwKKC...',
+    '....wwwwww....',
+    '....ww..ww....',
+    '....ww..ww....',
+    '....BB..BB....',
+    '...BBB..BBB...',
+  ];
+  const NAGI_B = [
+    '....DDDDDD....',
+    '...DDIDDIDD...',
+    '..DDIDDDDIDDr.',
+    '..DIDNNNNDIDrE',
+    '..DDNNNNNNDDr.',
+    '...DNNNNNNDD..',
+    '....NNNNNN....',
+    '....NNbbNN....',
+    '..KKKKbbKKKK..',
+    '.KKKKKbbKKKKK.',
+    's.KKKKbbKKKK.s',
+    's.KKKKKKKKKK.s',
+    '..KKKbbbbKKK..',
+    '..CKKKKKKKKC..',
+    '....wwwwww....',
+    '....ww..ww....',
+    '....ww..ww....',
+    '....BB..BB....',
+    '...BBB..BBB...',
+  ];
+  // ヒバ：風守りの里の長（ナギの祖母）。山吹の肩かけと杖
+  const HIBA_F = [
+    '.....%%%%.....',
+    '....%%%%%%....',
+    '...%%ssss%%...',
+    '...%sesses%...',
+    '....ssSSss....',
+    '...KKKKKKKK...',
+    '..VVKKKKKKVV..',
+    '.sVVVVVVVVVVs&',
+    '.s.VVVVVVVV..&',
+    '...VVVVVVVV..&',
+    '...VVVVVVVV..&',
+    '...VVVVVVVV..&',
+    '....BB..BB....',
+  ];
+  // 雪狼：白い毛並みの狼（四つ足。手前向きは顔と目、奥向きは背中）
+  const WOLF_F = [
+    '..........L..L..',
+    '.........LlLLl..',
+    '........LllllL..',
+    '........lylyllL.',
+    'L.......lllllkk.',
+    'lL....LLlllllL..',
+    '.lLLLlllllllL...',
+    '.Lllllllllll....',
+    '..Llllllllll....',
+    '..LlL....LlL....',
+    '..LL.....LL.....',
+  ];
+  const WOLF_B = [
+    '..........L..L..',
+    '.........LlLLl..',
+    '........LllllL..',
+    '........LlllllL.',
+    'L.......LllllL..',
+    'lL....LLlllllL..',
+    '.lLLLlllllllL...',
+    '.Lllllllllll....',
+    '..Llllllllll....',
+    '..LlL....LlL....',
+    '..LL.....LL.....',
+  ];
+
   // ---------- 生成 ----------
   function makeCanvas(w, h) {
     if (typeof document === 'undefined') return null;
@@ -644,6 +754,12 @@
       miner: { F: MINER_F, B: MINER_F, legs: 3 },
       kid: { F: KID_F, B: KID_F, legs: 2 },
       elder: { F: ELDER_F, B: ELDER_F, legs: 0 },
+      // 雪小鬼：小鬼の絵を、白い毛と氷色の目に（v0.3）
+      snowgob: { F: GOBLIN_F, B: GOBLIN_B, legs: 2, pal: { a: '#dce6f2', A: '#8e9ebc', b: '#5a6a8c', B: '#3a4666', d: '#38c8ff', e: '#2a2a3a' } },
+      turu: { F: TURU_F, B: TURU_F, legs: 0 },
+      nagi: { F: NAGI_F, B: NAGI_B, legs: 4 },
+      hiba: { F: HIBA_F, B: HIBA_F, legs: 0 },
+      wolf: { F: WOLF_F, B: WOLF_B, legs: 2 },
       turtle: { F: TURTLE_F, B: TURTLE_B, legs: 3, pal: { z: '#7a5a3a', Z: '#4a3422', g: '#6a9a3a', a: '#a8a060', A: '#6a6030', d: '#ff4a2a' } },
     };
     for (const k in defs) {

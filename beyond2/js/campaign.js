@@ -82,7 +82,9 @@
   // 出撃のときに地図へ持っていくもの
   function carry(p, party, reqId) {
     const charms = {};
-    for (const id of ['riko'].concat(party)) { const c = p.equip && p.equip[id]; if (c && (p.charms || []).includes(c)) charms[id] = c; }
+    const r = reqId ? D.req(reqId) : null;
+    const guest = r && r.guest && !party.includes(r.guest) ? [r.guest] : [];   // 同行のゲスト（m8 のナギ）にも、持たせたお守り
+    for (const id of ['riko'].concat(party, guest)) { const c = p.equip && p.equip[id]; if (c && (p.charms || []).includes(c)) charms[id] = c; }
     return { party: ['riko'].concat(party), up: Object.assign({}, p.up), hpb: rankIndex(p.merit), charms, taken: reqId && p.chests ? (p.chests[reqId] || []).slice() : [] };
   }
 
@@ -166,6 +168,8 @@
     p.merit += out.merit;
     if (first && r.reward.item) { p.items.push(r.reward.item); p.up[r.reward.item] = true; out.items.push(r.reward.item); }
     for (const it of st.items || []) if (!p.items.includes(it)) { p.items.push(it); out.items.push(it); }
+    // 地図の宝箱で手に入れた道具（引き鉤など。v0.3）は、ギルドへ持ち帰る
+    for (const k in st.up || {}) if (st.up[k] && !p.up[k]) p.up[k] = true;
     if (first && r.trophy && !p.trophies.includes(r.trophy)) { p.trophies.push(r.trophy); out.trophy = r.trophy; }
     // 持ち帰った宝箱は、受けなおしでは空（一つにつき一度きり）
     const goalChests = chestIdsOf(D.map(r.map));
@@ -192,6 +196,7 @@
     if (p.moments.length > 16) p.moments.length = 16;
     // 仲間の加入
     if (reqId === 'm3' && !p.roster.includes('tobi')) { p.roster.push('tobi'); out.joined.push('tobi'); }
+    if (reqId === 'm8' && !p.roster.includes('nagi')) { p.roster.push('nagi'); out.joined.push('nagi'); }   // 風守りナギ（v0.3）
     const rank1 = rankIndex(p.merit);
     p.rank = D.RANKS[rank1].star;
     if (rank1 > rank0) out.rankUp = { from: D.RANKS[rank0], to: D.RANKS[rank1] };
@@ -222,9 +227,10 @@
   }
 
   // 依頼板の「おすすめ」：同行できる仲間の力で、どの装置・手だてが使えるか
-  function verbsOf(party) {
+  function verbsOf(party, up) {
     const v = new Set(['shoot', 'rope']);
-    for (const id of party) for (const x of root.S21.HERO[id].verbs) v.add(x);
+    if (up && up.hook) v.add('pull');                      // 引き鉤（v0.3）
+    for (const id of party) for (const x of root.S21.verbsOf({ up: up || {} }, id)) v.add(x);
     return v;
   }
 

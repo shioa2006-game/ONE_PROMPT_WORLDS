@@ -70,11 +70,11 @@ window.OPW_BEYOND = [
   {
     title: 'GUILDWARD',
     genre: 'ギルドRPG・クォータービュー攻略',
-    description: '丘の町カザミの 冒険者ギルド「風見鶏」。正式な冒険者に なったばかりの 少年斥候リコが、依頼板から 依頼を選び、同行する 仲間を 二人 選んで 出かける。押す、凍らせる、吹き飛ばす。連れていく 仲間しだいで、攻略の 道すじが 変わる。腕だめしの 印を 集め、仲間に お守りを 持たせ、こなした 依頼にも 別の 二人で 挑める。',
+    description: '丘の町カザミの 冒険者ギルド「風見鶏」。正式な冒険者に なったばかりの 少年斥候リコが、依頼板から 依頼を選び、同行する 仲間を 二人 選んで 出かける。押す、凍らせる、吹き飛ばす。連れていく 仲間しだいで、攻略の 道すじが 変わる。腕だめしの 印を 集め、仲間に お守りを 持たせ、こなした 依頼にも 別の 二人で 挑める。第一章を 終えたら、雪の 峠を こえる 第二章へ。',
     path: 'beyond2/index.html',
     basedOn: ['game21'],
     status: 'dev',
-    version: '0.2',
+    version: '0.3',
     updatedDate: '2026-11-28',
     changelog: 'https://github.com/shioa2006-game/ONE_PROMPT_WORLDS/blob/main/beyond2/CHANGELOG.md',
     thumbnail: 'assets/thumbs/beyond2.webp',

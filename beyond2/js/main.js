@@ -9,12 +9,12 @@
   const lx = low.getContext('2d');
   lx.imageSmoothingEnabled = false; ctx.imageSmoothingEnabled = false;
   const FONT = '"BIZ UDPGothic","Yu Gothic UI","Meiryo","Hiragino Sans",sans-serif';
-  const HC = { riko: S.HERO.riko.color, gard: S.HERO.gard.color, sena: S.HERO.sena.color, tobi: S.HERO.tobi.color, tb: S.HERO.tobi.color,
-    mimoza: '#e8c84a', dora: '#e8823a', tonbo: '#9aa6ba', hans: '#c8a070', kid: '#d86a5a', elder: '#b0b0b8', bolo: '#b0b0b8', dan: '#b0b0b8', m1: '#b0b0b8', m2: '#b0b0b8', narr: '#c8c0e0' };
+  const HC = { riko: S.HERO.riko.color, gard: S.HERO.gard.color, sena: S.HERO.sena.color, tobi: S.HERO.tobi.color, tb: S.HERO.tobi.color, nagi: S.HERO.nagi.color, hiba: '#e8c060',
+    mimoza: '#e8c84a', dora: '#e8823a', tonbo: '#9aa6ba', turu: '#d8a878', hans: '#c8a070', kid: '#d86a5a', elder: '#b0b0b8', bolo: '#b0b0b8', dan: '#b0b0b8', m1: '#b0b0b8', m2: '#b0b0b8', narr: '#c8c0e0' };
   const SAVE_KEY = 'beyond2_guildward_save';
   const OPT_KEY = 'beyond2_guildward_opt';
   const QS = new URLSearchParams(location.search);
-  const VERBNAME = { move: '歩く', push: '押す', shoot: '射る', rope: '鉤縄をかけて渡る', freeze: '凍らせる', blast: '発破', light: '灯す' };
+  const VERBNAME = { move: '歩く', push: '押す', shoot: '射る', rope: '鉤縄をかけて渡る', freeze: '凍らせる', blast: '発破', light: '灯す', pull: '引き鉤で引く', waft: 'あおぐ' };
 
   function fit() {
     const s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -220,6 +220,16 @@
       case 'flee': return 0.35;
       case 'cleared': return 1.2;
       case 'drain': case 'linkShow': return 0.7;
+      // v0.3：引き鉤・レバー・つらら・雪
+      case 'hook': return 0.3;
+      case 'lever': return 0.35;
+      case 'icicle': return 0.18 + Math.min(0.3, Math.max(1, (e.z0 - e.z1)) * 0.035);
+      case 'iceShatter': return 0.2;
+      case 'snowClear': return 0.25;
+      // v0.3：あおぐ（弧を描いて、ふわりと下りる）・風鳴り石
+      case 'gust': return 0.16;
+      case 'waft': return 0.5 + Math.min(0.2, (e.arc || 1) * 0.05);
+      case 'chime': return 0.6;
       default: return 0;
     }
   }
@@ -276,6 +286,8 @@
         if (e.verb === 'rope') A.sfx('rope');
         if (e.verb === 'freeze') A.sfx('charge');
         if (e.verb === 'blast') A.sfx('fuse');
+        if (e.verb === 'pull') A.sfx('draw');
+        if (e.verb === 'waft') A.sfx('waft');
         G.camFocusOverride = [e.tx, e.ty, e.tz];
         break;
       }
@@ -296,8 +308,8 @@
       case 'freezeUnit': { A.sfx('crack'); const u = U(e.id); if (u) { u.frozen = 2; burst(u.x, u.y, u.z + 1, 10, '#c8f4ff', 1.5); } break; }
       case 'freezeFall': A.sfx('frost'); setTimeout(() => A.sfx('crack'), 150); break;
       case 'crystal': { A.sfx('frost'); setTimeout(() => A.sfx('ding'), 200); const o = O(e.o); if (o) burst(o.x, o.y, o.z + 2, 20, '#dff8ff', 2); break; }
-      case 'rune': A.sfx('rune', { n: e.n }); G.banner = { text: '門の灯　' + e.n + ' / ' + ((G.st.obj && G.st.obj.need) || 3), t: 0, life: 1.4, col: '#a8e8ff', small: true }; break;
-      case 'runesDone': A.sfx('door'); A.sfx('bloom', { size: 3 }); setBanner({ text: '門がひらいた！', sub: '奥へ進める', t: 0, life: 2.0, col: '#bfefff', prio: true }); G.shake = Math.max(G.shake, 0.3); break;
+      case 'rune': A.sfx('rune', { n: e.n }); G.banner = { text: (G.sec.runeName || '門の灯') + '　' + e.n + ' / ' + ((G.st.obj && G.st.obj.need) || 3), t: 0, life: 1.4, col: '#a8e8ff', small: true }; break;
+      case 'runesDone': A.sfx('door'); A.sfx('bloom', { size: 3 }); setBanner({ text: e.label || '門がひらいた！', sub: e.label ? '' : '奥へ進める', t: 0, life: 2.0, col: '#bfefff', prio: true }); G.shake = Math.max(G.shake, 0.3); break;
       case 'slide': A.sfx(e.roll ? 'rumble' : (e.slip ? 'scrape' : 'push'), { d: c.dur }); e._landed = {}; break;
       case 'bump': A.sfx('bonk'); break;
       case 'dmg': {
@@ -325,7 +337,7 @@
         const u = U(e.id); if (!u) break;
         const d = G.disp[e.id] || u;
         if (e.atCell !== undefined && u.team === 'e') { G.rollCount = (G.rollCount || 0) + 1; popup(d.x, d.y, d.z + 5.2, G.rollCount + '体！', '#ffe680', G.rollCount >= 3); }
-        if (['hp', 'enemy', 'push', 'arrow', 'arrowHigh', 'frost', 'bump', 'fall', 'crush', 'rock', 'blast'].includes(e.how)) { burst(d.x, d.y, d.z + 1, 16, u.team === 'h' ? '#ffffff' : '#e8e0ff', 2.2); A.sfx('ko'); }
+        if (['hp', 'enemy', 'push', 'arrow', 'arrowHigh', 'frost', 'bump', 'fall', 'crush', 'rock', 'blast', 'drop'].includes(e.how)) { burst(d.x, d.y, d.z + 1, 16, u.team === 'h' ? '#ffffff' : '#e8e0ff', 2.2); A.sfx('ko'); }
         if (e.how === 'void') A.sfx('fallaway');
         if (e.how === 'drown') { A.sfx('splash'); splash(d.x, d.y, d.z); }
         if (e.how === 'ice') { A.sfx('crack'); burst(d.x, d.y, d.z + 0.5, 12, '#c8f4ff', 1.6); }
@@ -402,6 +414,19 @@
       }
       case 'drain': A.sfx('rumble'); A.sfx('splash'); break;
       case 'linkShow': A.sfx('chain'); break;
+      case 'hook': A.sfx('hook'); G.lines.push({ k: 'hook', from: e.from, to: e.to, t: 0, dur: c.dur }); break;
+      case 'lever': A.sfx('lever'); break;
+      case 'icicle': A.sfx('crack'); break;
+      case 'iceShatter': A.sfx('icefall'); burst(e.x, e.y, e.z, 16, '#dff8ff', 2.2); break;
+      case 'gust': {
+        // 風の筋（ナギから、運ぶ向きへ）
+        const [dx, dy] = S.DIRS[e.dir || 0];
+        for (let k = 0; k < 16; k++) G.fx.push({ k: 'p', x: e.from[0] + dx * 0.3, y: e.from[1] + dy * 0.3, z: e.from[2] + 0.8 + Math.random() * 0.8, vx: dx * (2.5 + Math.random() * 2) + (Math.random() - 0.5) * 0.6, vy: dy * (2.5 + Math.random() * 2) + (Math.random() - 0.5) * 0.6, vz: Math.random() * 0.8, g: 0, t: 0, life: 0.4 + Math.random() * 0.25, col: k % 3 ? '#f4f8ff' : '#f2e0a0', sz: 1 });
+        break;
+      }
+      case 'waft': A.sfx('whoosh'); break;
+      case 'chime': A.sfx('chime'); burst(e.x, e.y, e.z + 2.4, 20, '#ffe9a0', 1.8); G.fx.push({ k: 'ring', x: e.x, y: e.y, z: e.z + 2, t: 0, life: 0.6 }); break;
+      case 'snowClear': A.sfx('scrape', { d: 0.2 }); for (const [x, y] of e.cells) burst(x, y, (G.vs.h[S.idx(G.vs, x, y)] || 0) + 0.3, 8, '#f4f8ff', 1.6, true); break;
     }
   }
 
@@ -488,7 +513,7 @@
       }
       case 'dmg': { const d = G.disp[e.id]; if (d) d.flash = 1 - p; break; }
       case 'ko': {
-        if (['hp', 'push', 'arrow', 'arrowHigh', 'frost', 'bump', 'fall', 'crush', 'rock', 'blast'].includes(e.how)) {
+        if (['hp', 'push', 'arrow', 'arrowHigh', 'frost', 'bump', 'fall', 'crush', 'rock', 'blast', 'drop', 'away'].includes(e.how)) {
           const u = U(e.id); if (u && u.team === 'e') { const d = dispOf(e.id); d.alpha = 1 - p; d.flash = 1 - p; }
         }
         if (e.how === 'drown') { const d = dispOf(e.id); d.z = (d.z0 === undefined ? (d.z0 = d.z) : d.z0) - p * 1.2; d.alpha = 1 - p; }
@@ -517,7 +542,7 @@
           const dd = Math.hypot(x - (e.cx === undefined ? x : e.cx), y - (e.cy === undefined ? y : e.cy));
           if (!e._done[k] && p >= dd * 0.28) {
             e._done[k] = 1;
-            const i = S.idx(st, x, y); st.t[i] = 'i'; st.by[i] = 'sena';
+            const i = S.idx(st, x, y); st.t[i] = 'i'; st.by[i] = e.by || 'sena';
             burst(x, y, st.h[i] + 0.2, 5, '#dff8ff', 1.2);
             if (Object.keys(e._done).length % 2) A.sfx('crack');
           }
@@ -526,6 +551,21 @@
       }
       case 'freezeFall': { const o = O(e.o); if (o && p > 0.3 && !o.frozen) { o.frozen = true; burst(o.bx, o.by, o.bz + 2, 20, '#dff8ff', 2.2); } break; }
       case 'crystal': { const o = O(e.o); if (o && p > 0.4) o.lit = true; break; }
+      case 'icicle': { const d = G.odisp[e.o] || (G.odisp[e.o] = Object.assign({}, O(e.o))); d.x = e.x; d.y = e.y; d.z = lerp(e.z0, e.z1, p * p) - (S.ICICLE_Z || 3); break; }
+      case 'waft': {
+        // 弧を描いて、ふわりと下りる（押す・発破の重い手ごたえとの対比。m8 の9章）
+        const key = e.ref.u || e.ref.o;
+        const d = e.ref.u ? dispOf(key) : (G.odisp[key] || (G.odisp[key] = Object.assign({}, O(key))));
+        const q = p < 0.85 ? p / 0.85 : 1;
+        const qq = q * q * (3 - 2 * q);
+        d.x = lerp(e.from[0], e.to[0], qq); d.y = lerp(e.from[1], e.to[1], qq);
+        const low = Math.max(e.to[2], -14);
+        d.z = lerp(e.from[2], low, q) + Math.sin(Math.min(1, q) * Math.PI) * (e.arc || 1.4);
+        if (e.ref.u) d.pose = 'walk1';
+        if (Math.random() < 0.5) G.fx.push({ k: 'p', x: d.x, y: d.y, z: d.z + 0.4, vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4, vz: -0.3, g: 0, t: 0, life: 0.35, col: '#f4f8ff', sz: 1 });
+        break;
+      }
+      case 'lever': { const d = G.odisp[e.o] || (G.odisp[e.o] = Object.assign({}, O(e.o))); d.leverOn = p > 0.5; break; }
       case 'eatk': {
         if (!e.ranged) {
           const d = dispOf(e.id);
@@ -578,7 +618,19 @@
         break;
       }
       case 'iceblock': G.vs.objs.push(S.clone(e.o)); break;
-      case 'freezeCells': { for (const [x, y] of e.cells) { const i = S.idx(G.vs, x, y); G.vs.t[i] = 'i'; G.vs.by[i] = 'sena'; } break; }
+      case 'freezeCells': { for (const [x, y] of e.cells) { const i = S.idx(G.vs, x, y); G.vs.t[i] = 'i'; G.vs.by[i] = e.by || 'sena'; } break; }
+      case 'waft': {
+        const key = e.ref.u || e.ref.o;
+        const ent = e.ref.u ? U(key) : O(key);
+        if (ent && e.to[2] > -10) { ent.x = e.to[0]; ent.y = e.to[1]; ent.z = e.to[2]; }
+        if (e.to[2] > -10 && e.land !== 'sink' && e.land !== 'drown' && e.land !== 'hit') { burst(e.to[0], e.to[1], e.to[2] + 0.1, 8, '#e8f0ff', 1.2, true); A.sfx('thud', { big: 1 }); }
+        if (e.ref.u) delete G.disp[key]; else if (!['lost', 'sink', 'hit'].includes(e.land)) delete G.odisp[key];
+        break;
+      }
+      case 'chime': { const o = O(e.o); if (o) o.rung = true; break; }
+      case 'icicle': { const o = O(e.o); if (o) o.gone = true; delete G.odisp[e.o]; A.sfx('icefall'); burst(e.x, e.y, e.z1 + 0.2, 18, '#dff8ff', 2.4); G.shake = Math.max(G.shake, 0.22); break; }
+      case 'lever': { const o = O(e.o); if (o) o.done = true; delete G.odisp[e.o]; break; }
+      case 'snowClear': for (const [x, y] of e.cells) G.vs.t[S.idx(G.vs, x, y)] = 'd'; break;
       case 'freezeFall': { const o = O(e.o); if (o) o.frozen = true; G.vs.links.push(e.link); for (const [x, y] of e.cells) { const i = S.idx(G.vs, x, y); G.vs.t[i] = 'i'; } break; }
       case 'crystal': { const o = O(e.o); if (o) o.lit = true; break; }
       case 'target': { const o = O(e.o); if (o) o.hit = true; break; }
@@ -690,7 +742,7 @@
       }
       for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) {
         if (!blastClickable(st, x, y)) continue;
-        if (stands.some(([sx, sy]) => S.inRange(sx, sy, x, y, S.RANGE.blast) && (Math.abs(sx - x) > 1 || Math.abs(sy - y) > 1))) G.blastTint[S.idx(st, x, y)] = 1;
+        if (stands.some(([sx, sy]) => S.inRange(sx, sy, x, y, S.RANGE.blast + (u.rangeUp || 0)) && (Math.abs(sx - x) > 1 || Math.abs(sy - y) > 1))) G.blastTint[S.idx(st, x, y)] = 1;
       }
     }
     G.hv = null;
@@ -908,7 +960,13 @@
       let h = h0;
       // その力を持つ仲間がいなければ、別の手（alt）か、次のヒントへ
       let who = h.need ? S.heroWith(st, h.need) : 'riko';
-      if (h.need && !who && h.alt) { h = Object.assign({}, h0, h0.alt); who = S.heroWith(st, h.need); }
+      if (h.need && !who && h.alt) {
+        // 別の手は一つか、いる仲間の順に並べた配列（v0.3）
+        const alts = Array.isArray(h0.alt) ? h0.alt : [h0.alt];
+        const a = alts.find(q => S.heroWith(st, q.need)) || alts[alts.length - 1];
+        h = Object.assign({}, h0, a); who = S.heroWith(st, h.need);
+      }
+      if (h.show && !h.show(st)) continue;
       if (h.need && !who) continue;
       if (h.flag && st.flags[h.flag]) continue;
       if (h.item && st.items.includes(h.item)) continue;
@@ -922,6 +980,8 @@
       }
       G.bubbles = G.bubbles.filter(b => b.text !== text);
       say(who, text);
+      // 別の手（v0.3）：その力を持つ仲間がいれば、ひとことずつ添える
+      for (const a of h.also || []) { const w2 = S.heroWith(st, a.need); if (w2 && w2 !== who) { G.bubbles = G.bubbles.filter(b => b.text !== a.text); say(w2, a.text); } }
       if (S.unitById(st, who) && S.unitById(st, who).team === 'h') selectHero(who);
       hintMark(h.mark || h.o || h.done);
       return;
@@ -970,7 +1030,9 @@
       if (!(lxp >= r.x && lxp < r.x + r.w && lyp >= r.y && lyp < r.y + r.h)) continue;
       const u = S.unitById(st, r.id);
       if (!u || u.ko || u.gone) continue;
-      if (u.team !== 'e' && !u.fixed && u.team !== 'n' && hv.cell && !(hv.cell[0] === u.x && hv.cell[1] === u.y)) {
+      // ナギを選んでいるときは、ほかの仲間の絵を指せば、その仲間（あおぐ相手）を先に選ぶ（v0.3）
+      const waftee = u.team === 'h' && u.id !== G.sel && S.can(st, G.sel, 'waft');
+      if (u.team !== 'e' && !u.fixed && u.team !== 'n' && hv.cell && !(hv.cell[0] === u.x && hv.cell[1] === u.y) && !waftee) {
         const sf = S.surface(st, hv.cell[0], hv.cell[1]);
         const behindUseful = sf.stand || sf.water || st.objs.some(o => !o.gone && o.x === hv.cell[0] && o.y === hv.cell[1]);
         if (behindUseful) continue;
@@ -984,10 +1046,10 @@
       const mxx = (x0 + x1) / 2;
       if (Math.abs(lxp - mxx) < 12 && lyp > Math.min(y0, y1) - 4 && lyp < y1 + 6 && !hv.unit) { hv.obj = o; }
     }
-    if (hv.objPick && !(hv.unit && hv.unit.team === 'e')) { hv.obj = hv.objPick; hv.unit = null; }
+    if (hv.objPick && (!(hv.unit && hv.unit.team === 'e') || hv.objPick.k === 'icicle')) { hv.obj = hv.objPick; hv.unit = null; }
     if (!hv.unit && !hv.obj && hv.cell) {
       const [x, y] = hv.cell;
-      const objs = st.objs.filter(o => !o.gone && o.x === x && o.y === y && ['crate', 'block', 'iceblock', 'boulder', 'pillar', 'anchor', 'target', 'chest', 'crack', 'crystal'].includes(o.k));
+      const objs = st.objs.filter(o => !o.gone && o.x === x && o.y === y && ['crate', 'block', 'iceblock', 'boulder', 'pillar', 'anchor', 'target', 'chest', 'crack', 'crystal', 'lever', 'chime'].includes(o.k));
       if (objs.length) objs.sort((a, b) => (b.z || 0) - (a.z || 0)), hv.obj = objs[0];
       const u = S.unitAt(st, x, y);
       if (u && !hv.obj) hv.unit = u;
@@ -1014,7 +1076,7 @@
   function inUI(x, y) {
     const n = partyIds().length;
     if (y > 616 && x < (n >= 4 ? 676 : 640)) return true;
-    if (y > 566 && y < 612 && x < 270 && G.st && G.st.up.staff && S.can(G.st, G.sel, 'freeze')) return true;
+    if (y > 566 && y < 612 && x < 270 && G.st && ((G.st.up.staff && S.can(G.st, G.sel, 'freeze')) || (G.st.mode === 'combat' && S.can(G.st, G.sel, 'pull')))) return true;
     if (y < 64 && x > 700) return true;
     if (G.st && G.st.mode === 'combat' && x > 1040 && y > 600) return true;
     return false;
@@ -1049,12 +1111,40 @@
     for (const d of [want, (want + 1) % 4, (want + 3) % 4, (want + 2) % 4]) if (valid.includes(d)) return tryDir(d);
     return null;
   }
+  // 引き鉤：マウスを寄せた側（寄ってくる向き）を選ぶ。その向きで引けなければ、ほかの向きをためす（押すと同じ選び方）
+  function pullPlan(st, actor, ref, ent, hv) {
+    const want = quadDir(st, ent, G.mouse[0] / 2, G.mouse[1] / 2);
+    const valid = [];
+    for (let d = 0; d < 4; d++) { const q = S.plan(st, actor, { k: 'pull', ref, dir: d }); if (q.ok) valid.push(q); }
+    hv.pushValid = valid.map(q => q.intent.dir);
+    let p = valid.find(v => v.intent.dir === want);
+    if (!p) for (const d of [(want + 1) % 4, (want + 3) % 4, (want + 2) % 4]) { p = valid.find(v => v.intent.dir === d); if (p) break; }
+    return p || S.plan(st, actor, { k: 'pull', ref, dir: want });
+  }
+  // あおぐ：マウスを寄せた側（運ぶ向き）を選ぶ。その向きであおげなければ、ほかの向きをためす（押すと同じ選び方）
+  function waftPlan(st, actor, ref, ent, hv) {
+    const want = quadDir(st, ent, G.mouse[0] / 2, G.mouse[1] / 2);
+    const valid = [];
+    for (let d = 0; d < 4; d++) { const q = S.plan(st, actor, { k: 'waft', ref, dir: d }); if (q.ok) valid.push(q); }
+    hv.pushValid = valid.map(q => q.intent.dir);
+    let p = valid.find(v => v.intent.dir === want);
+    if (!p) for (const d of [(want + 1) % 4, (want + 3) % 4, (want + 2) % 4]) { p = valid.find(v => v.intent.dir === d); if (p) break; }
+    return p || S.plan(st, actor, { k: 'waft', ref, dir: want });
+  }
   function NM(id) { return nameOf(id); }
   function deriveIntent(hv) {
     const st = G.st, combat = st.mode === 'combat';
     const selU = S.unitById(st, G.sel);
     let actor = G.sel;
-    if (hv.unit && hv.unit.team === 'h') { hv.intent = { k: 'select', id: hv.unit.id }; return; }
+    if (hv.unit && hv.unit.team === 'h') {
+      // ナギを選んで、ほかの仲間を指したら「あおぐ」（運べるときだけ。選ぶときは札か Tab。v0.3）
+      const tgt = hv.unit;
+      if (tgt.id !== G.sel && selU && !selU.ko && S.can(st, G.sel, 'waft') && !(combat && selU.acted)) {
+        const wp = waftPlan(st, G.sel, { u: tgt.id }, tgt, hv);
+        if (wp && wp.ok) { hv.plan = wp; hv.actor = G.sel; hv.target = tgt; hv.waftAlly = true; finishPlan(hv); return; }
+      }
+      hv.intent = { k: 'select', id: hv.unit.id }; return;
+    }
     if (hv.unit && hv.unit.team === 'n') {
       const n = hv.unit;
       hv.target = n;
@@ -1068,6 +1158,9 @@
       if (!selU || selU.ko) return;
       if (selU.acted) { hv.why = NM(G.sel) + 'は行動ずみ（Tab で次の仲間）'; hv.target = e; return; }
       if (S.can(st, actor, 'push')) hv.plan = pushPlan(st, actor, { u: e.id }, e, hv);
+      // リコ：ふだんは射る。「引く：入」（Shift）なら引き鉤で引く（05 2.2）
+      else if (S.can(st, actor, 'pull') && (G.pullMode || G.keyShift)) hv.plan = pullPlan(st, actor, { u: e.id }, e, hv);
+      else if (S.can(st, actor, 'waft')) hv.plan = waftPlan(st, actor, { u: e.id }, e, hv);
       else if (S.can(st, actor, 'shoot')) hv.plan = S.plan(st, actor, { k: 'shoot', ref: { u: e.id } });
       else if (S.can(st, actor, 'freeze')) hv.plan = S.plan(st, actor, { k: 'freeze', ref: { u: e.id } });
       else if (S.can(st, actor, 'blast')) hv.plan = S.plan(st, actor, { k: 'blast', x: e.x, y: e.y });
@@ -1081,9 +1174,26 @@
       let need = null;
       if (['crate', 'block', 'iceblock', 'boulder', 'pillar'].includes(o.k)) need = 'push';
       else if (o.k === 'anchor') need = 'rope';
-      else if (o.k === 'target') need = 'shoot';
+      else if (o.k === 'target' || o.k === 'icicle') need = 'shoot';
+      else if (o.k === 'lever') need = 'pull';
+      else if (o.k === 'chime') need = 'waft';
       else if (o.k === 'fall' || o.k === 'crystal') need = 'freeze';
       else if (o.k === 'crack') need = 'blast';
+      // 引き鉤を持つリコを選んで、軽い物を指したら「引く」（探索中は切りかえなし。05 2.2）。引けなければ、押せる仲間へ
+      if (S.PULLABLE.includes(o.k) && selU && !selU.ko && S.can(st, G.sel, 'pull') && !(combat && selU.acted)) {
+        const pp = pullPlan(st, G.sel, { o: o.id }, o, hv);
+        if (pp && pp.ok) { hv.plan = pp; hv.actor = G.sel; hv.target = o; finishPlan(hv); return; }
+        // 押せる仲間もいなければ、引けない理由を出す
+        if (!S.heroWith(st, 'push') && !S.can(st, G.sel, 'blast')) { hv.plan = pp; hv.actor = G.sel; hv.target = o; finishPlan(hv); return; }
+      }
+      // ナギを選んで、軽い物を指したら「あおぐ」。運べなければ、押せる仲間へ
+      if (S.WAFTABLE.includes(o.k) && selU && !selU.ko && S.can(st, G.sel, 'waft') && !(combat && selU.acted)) {
+        const wp = waftPlan(st, G.sel, { o: o.id }, o, hv);
+        if (wp && wp.ok) { hv.plan = wp; hv.actor = G.sel; hv.target = o; finishPlan(hv); return; }
+        // 押せる仲間もいなければ、あおげない理由を出す（「ガルドがいれば」ではなく）
+        if (!S.heroWith(st, 'push')) { hv.plan = wp; hv.actor = G.sel; hv.target = o; finishPlan(hv); return; }
+      }
+      if (o.k === 'lever' && !S.heroWith(st, 'pull')) { hv.target = o; hv.why = o.done ? 'もう引いた' : '引き鉤があれば、引ける（いまは持っていない）'; return; }
       // 戦いの中でトビを選んで押せる物を指したら、マウスを寄せた側の升で発破して、反対へ吹き飛ばす（v0.2。押す向きの選び方と同じ）
       if (need === 'push' && combat && S.can(st, actor, 'blast') && o.k !== 'pillar' && selU && !selU.acted) {
         const bp = blastPushPlan(st, actor, o, hv);
@@ -1102,6 +1212,9 @@
       if (need === 'push') hv.plan = pushPlan(st, actor, { o: o.id }, o, hv);
       else if (o.k === 'anchor') hv.plan = S.plan(st, actor, { k: 'rope', o: o.id });
       else if (o.k === 'target') hv.plan = o.hit ? { ok: false, why: 'もう射ぬいた' } : S.plan(st, actor, { k: 'shoot', ref: { o: o.id } });
+      else if (o.k === 'icicle') hv.plan = S.plan(st, actor, { k: 'shoot', ref: { o: o.id } });
+      else if (o.k === 'lever') hv.plan = S.plan(st, actor, { k: 'pull', ref: { o: o.id } });
+      else if (o.k === 'chime') hv.plan = o.rung ? { ok: false, why: 'もう鳴った' } : S.plan(st, actor, { k: 'waft', ref: { o: o.id } });
       else if (o.k === 'fall' || o.k === 'crystal') hv.plan = S.plan(st, actor, { k: 'freeze', ref: { o: o.id } });
       else if (o.k === 'crack') hv.plan = S.plan(st, actor, { k: 'blast', x: o.x, y: o.y });
       else if (o.k === 'chest') hv.plan = S.plan(st, actor, { k: 'move', x: o.x, y: o.y });
@@ -1144,13 +1257,14 @@
       else if (st.obj.k === 'rescue' || st.waves) finishPlan(hv);
     }
   }
-  function needWho(v) { return { push: '押せる仲間（ガルド）', freeze: '凍らせられる仲間（セナ）', blast: '発破できる仲間（トビ）', rope: 'リコ', shoot: 'リコ' }[v]; }
+  function needWho(v) { return { push: '押せる仲間（ガルド）', freeze: '凍らせられる仲間（セナ）', blast: '発破できる仲間（トビ）', rope: 'リコ', shoot: 'リコ', pull: '引き鉤を持つリコ', waft: 'あおげる仲間（ナギ）' }[v]; }
   const FUT = [['落ちていった', '落ちていく'], ['すべっていった', 'すべっていく'], ['沈んだ', '沈む'], ['倒れた', '倒れる'], ['ぶつかった', 'ぶつかる'], ['ぶつけた', 'ぶつける'],
     ['押しつぶした', '押しつぶす'], ['なぎ倒した', 'なぎ倒す'], ['押した', '押す'], ['射ぬいた', '射ぬく'], ['射た', '射る'], ['渡った', '渡る'], ['凍らせた', '凍らせる'],
     ['閉じこめた', '閉じこめる'], ['なった', 'なる'], ['凍った', '凍る'], ['落ちた', '落ちる'], ['のった', 'のる'], ['入れた', '入れる'], ['動いた', '動く'],
     ['開いた', '開く'], ['ひらいた', 'ひらく'], ['下りた', '下りる'], ['止まった', '止まる'], ['崩れた', '崩れる'], ['ひらけた', 'ひらける'], ['かかった', 'かかる'], ['ともった', 'ともる'],
     ['砕いた', '砕く'], ['吹き飛ばした', '吹き飛ばす'], ['倒した', '倒す'], ['ひっくり返った', 'ひっくり返る'], ['はじかれた', 'はじかれる'], ['刺さった', '刺さる'], ['命中した', '命中する'], ['つくった', 'つくる'], ['発破した', '発破する'], ['光った', '光る'],
-    ['当たった', '当たる'], ['通った', '通る'], ['ふさいだ', 'ふさぐ']];
+    ['当たった', '当たる'], ['通った', '通る'], ['ふさいだ', 'ふさぐ'], ['引きよせた', '引きよせる'], ['残った', '残る'], ['砕けた', '砕ける'], ['引いた', '引く'], ['出た', '出る'],
+    ['運んだ', '運ぶ'], ['飛ばした', '飛ばす'], ['越えた', '越える'], ['落とした', '落とす'], ['沈めた', '沈める'], ['鳴った', '鳴る'], ['流された', '流される'], ['飛び去った', '飛び去る'], ['すべりだした', 'すべりだす']];
   function fut(s) {
     let o = s.replace('（Z で戻せる）', '');
     for (const [a, b] of FUT) o = o.split(a + '。').join(b + '。').split(a + '（').join(b + '（').split(a + '、').join(b + '、').split(a + '！').join(b + '！').split(a + '）').join(b + '）');
@@ -1363,6 +1477,7 @@
     if (G.scene === 'play') drawOverlay(lx, st);
     drawFxLow(lx, st);
     lightsOn(lx, st, G.disp, sec);
+    if (R.drawWeather && G.scene === 'play') R.drawWeather(lx, sec, G.t);
     lx.restore();
     R.cam.x -= shk[0]; R.cam.y -= shk[1];
     ctx.drawImage(low, 0, 0, 1280, 720);
@@ -1507,8 +1622,48 @@
     const I = p.intent;
     const pv = hv.pv;
     const standZ = S.surface(st, p.stand[0], p.stand[1]).z;
-    if ((I.k === 'push' || I.k === 'blast') && pv) {
-      if (I.k === 'push') {
+    if ((I.k === 'push' || I.k === 'blast' || I.k === 'pull' || I.k === 'waft') && pv) {
+      if (I.k === 'waft') {
+        const wv = pv.evs.find(e => e.k === 'waft');
+        const ent = I.ref.u ? S.unitById(st, I.ref.u) : S.objById(st, I.ref.o);
+        if (ent && wv) {
+          const [x0, y0] = R.projF(st, wv.from[0], wv.from[1], wv.from[2] + 0.6);
+          const [x1, y1] = R.projF(st, wv.to[0], wv.to[1], Math.max(wv.to[2], -4) + 0.3);
+          const [xm, ym] = R.projF(st, (wv.from[0] + wv.to[0]) / 2, (wv.from[1] + wv.to[1]) / 2, Math.max(wv.from[2], wv.to[2]) + (wv.arc || 1.4) * 1.6 + 0.6);
+          c.strokeStyle = 'rgba(255,240,170,0.9)'; c.lineWidth = 1; c.setLineDash([2, 2]);
+          c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(xm, ym, x1, y1); c.stroke(); c.setLineDash([]);
+          for (const d of hv.pushValid || []) {
+            if (d === I.dir) continue;
+            const [ddx, ddy] = S.DIRS[d];
+            const [a0, b0] = R.projF(st, ent.x + ddx * 0.4, ent.y + ddy * 0.4, (ent.z || 0) + 0.6);
+            const [a1, b1] = R.projF(st, ent.x + ddx * 1.0, ent.y + ddy * 1.0, (ent.z || 0) + 0.6);
+            c.globalAlpha = 0.8; arrow(c, a0, b0, a1, b1, '#f0ecff'); c.globalAlpha = 1;
+          }
+        }
+      } else if (I.k === 'pull') {
+        // 引き鉤：リコから相手への縄の線と、寄ってくる向き（v0.3）
+        const ent = I.ref.u ? S.unitById(st, I.ref.u) : S.objById(st, I.ref.o);
+        if (ent) {
+          const [x0, y0] = R.projF(st, p.stand[0], p.stand[1], standZ + 1.5);
+          const [x1, y1] = R.projF(st, ent.x, ent.y, (ent.z || 0) + (I.ref.u ? 1 : 0.8));
+          dashed(c, x0, y0, x1, y1, col, 2, 2);
+          c.fillStyle = col; c.fillRect(Math.round(x1) - 1, Math.round(y1) - 1, 3, 3);
+          if (!p.lever) {
+            for (const d of hv.pushValid || []) {
+              if (d === p.pullDir) continue;
+              const [ddx, ddy] = S.DIRS[d];
+              const [a0, b0] = R.projF(st, ent.x + ddx * 0.4, ent.y + ddy * 0.4, (ent.z || 0) + 0.6);
+              const [a1, b1] = R.projF(st, ent.x + ddx * 1.0, ent.y + ddy * 1.0, (ent.z || 0) + 0.6);
+              c.globalAlpha = 0.8; arrow(c, a0, b0, a1, b1, '#f0ecff'); c.globalAlpha = 1;
+            }
+            const [ddx, ddy] = S.DIRS[p.pullDir];
+            const pl = 0.08 * Math.sin(t * 6);
+            const [a0, b0] = R.projF(st, ent.x + ddx * 0.2, ent.y + ddy * 0.2, (ent.z || 0) + 0.6);
+            const [a1, b1] = R.projF(st, ent.x + ddx * (1.35 + pl), ent.y + ddy * (1.35 + pl), (ent.z || 0) + 0.6);
+            arrow(c, a0, b0, a1, b1, col, true);
+          }
+        }
+      } else if (I.k === 'push') {
         const ent = I.ref.u ? S.unitById(st, I.ref.u) : S.objById(st, I.ref.o);
         if (ent) {
           for (const d of hv.pushValid || []) {
@@ -1574,9 +1729,20 @@
     if (I.k === 'shoot') {
       const tgt = I.ref.u ? S.unitById(st, I.ref.u) : S.objById(st, I.ref.o);
       if (tgt) {
+        const ic = !I.ref.u && tgt.k === 'icicle';
         const [x0, y0] = R.projF(st, p.stand[0], p.stand[1], standZ + 1.6);
-        const [x1, y1] = R.projF(st, tgt.x, tgt.y, (tgt.z || 0) + (I.ref.u ? 1 : 1.8));
+        const [x1, y1] = R.projF(st, tgt.x, tgt.y, (tgt.z || 0) + (I.ref.u ? 1 : ic ? (S.ICICLE_Z || 3) : 1.8));
         dashed(c, x0, y0, x1, y1, col, 3, 2);
+        // つらら：落ちる升と、残る物（氷のかたまり・飛び石）を半透明で（v0.3）
+        if (ic && pv) {
+          const [sx, sy] = R.proj(st, tgt.x, tgt.y, S.surface(st, tgt.x, tgt.y).void ? 0 : (st.t[S.idx(st, tgt.x, tgt.y)] === 'w' ? st.h[S.idx(st, tgt.x, tgt.y)] : S.surface(st, tgt.x, tgt.y).z));
+          const ib = pv.evs.find(e => e.k === 'iceblock');
+          c.globalAlpha = 0.5 + 0.2 * Math.sin(t * 6);
+          if (ib) R.drawObj(c, st, ib.o, t, ib.o, true);
+          else if (pv.evs.some(e => e.k === 'freezeCells')) R.diamond(c, sx, sy + 2, 16, '#bfefff');
+          c.globalAlpha = 1;
+          R.diamondLine(c, sx, sy, 14, 'rgba(255,240,160,0.9)');
+        }
       }
     }
     if (I.k === 'rope') {
@@ -1632,6 +1798,16 @@
         c.fillStyle = '#2c2634'; c.beginPath(); c.arc(sx, sy, 2.5, 0, 6.3); c.fill();
         c.fillStyle = Math.sin(G.t * 40) > 0 ? '#ffd070' : '#ff7a2a'; c.fillRect((sx + 1) | 0, (sy - 4) | 0, 2, 2);
         if (Math.random() < 0.6) G.fx.push({ k: 'p', x, y, z: z + 0.3, vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6, vz: 0.5, g: 2, t: 0, life: 0.25, col: '#ffb050', sz: 1 });
+      }
+      if (l.k === 'hook') {
+        // 引き鉤：鉤が飛んでいき、かかったら手もとへ（v0.3）
+        const [x0, y0] = R.projF(st, l.from[0], l.from[1], l.from[2] + 1.5);
+        const [x1, y1] = R.projF(st, l.to[0], l.to[1], l.to[2] + 0.4);
+        const q = p < 0.6 ? p / 0.6 : 1;
+        const ex = lerp(x0, x1, q), ey = lerp(y0, y1, q) - Math.sin(q * Math.PI) * 6;
+        c.strokeStyle = '#c8b090'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(x0, y0); c.lineTo(ex, ey); c.stroke();
+        c.fillStyle = '#e8ecf4'; c.fillRect(ex - 2, ey - 1, 4, 3); c.fillStyle = '#8a8ea0'; c.fillRect(ex - 2, ey + 1, 1, 2); c.fillRect(ex + 1, ey + 1, 1, 2);
       }
       if (l.k === 'ropeThrow') {
         const [x0, y0] = R.projF(st, l.from[0], l.from[1], l.from[2] + 1.5);
@@ -1889,6 +2065,7 @@
     if (G.cleared && G.st.mode !== 'combat') button('goGuild', 'ギルドへ帰る ▶', 1280 - 16 - 230, 62, 230, 46, () => goGuild(true), { pulse: true, bg: 'rgba(110,80,30,0.95)', size: 19, off: G.busy });
     const ids = partyIds();
     const selU = S.unitById(G.st, G.sel);
+    if (selU && S.can(G.st, G.sel, 'pull') && G.st.mode === 'combat') button('pullMode', '⛓ 引く：' + (G.pullMode || G.keyShift ? '入' : '切') + '（Shift）', 14, 572, 250, 36, () => { G.pullMode = !G.pullMode; refresh(); }, { size: 15, bg: G.pullMode ? 'rgba(60,100,40,0.95)' : undefined });
     if (selU && S.can(G.st, G.sel, 'freeze') && G.st.up.staff) button('iceMode', '❄ 氷をつくる：' + (G.iceMode || G.keyShift ? '入' : '切') + '（Shift）', 14, 572, 250, 36, () => { G.iceMode = !G.iceMode; refresh(); }, { size: 15, bg: G.iceMode ? 'rgba(40,90,130,0.95)' : undefined });
     const cw = ids.length >= 4 ? 158 : 198, step = cw + 8;
     ids.forEach((id, k) => heroCard(st, id, 14 + k * step, 622, cw, k));
@@ -1949,7 +2126,7 @@
     if (fr) ctx.drawImage(fr.c, x + 6, y + 8 - (sel ? 6 : 0) + (sel ? Math.round(Math.sin(G.t * 4)) : 0), fr.w * 3, Math.min(72, fr.h * 3));
     const tx = x + (w < 180 ? 52 : 62);
     txt((k + 1) + ' ' + S.HERO[u.k].name, tx, yy + 26, w < 180 ? 18 : 20, sel ? '#fff' : '#ddd');
-    txt(u.fixed ? '発破（その場から）' : S.HERO[u.k].verbName, tx, yy + 48, w < 180 ? 13 : 15, col, 'left');
+    txt(u.fixed ? '発破（その場から）' : S.verbLabel(u.k, G.st.up), tx, yy + 48, w < 180 ? 13 : 15, col, 'left');
     let inc = 0;
     if (combat && !G.busy) for (const it of G.intents) { if (it.target === id) inc += it.dmg; for (const a of it.also || []) if (a.id === id) inc += a.dmg; }
     const pw = Math.min(u.mhp * 9, w - (tx - x) - 62);
@@ -1963,7 +2140,7 @@
       const r = (G.intents.heroes || {})[id] || {};
       const lethal = r.ko !== undefined ? r.ko : inc >= u.hp;
       if (inc) { txt('見こみ', x + w - 8, yy + 14, 12, '#ffb8a8', 'right', 'normal'); txt((lethal ? '倒される ' : r.endure ? 'こらえる ' : '') + '−' + inc, x + w - 8, yy + 32, 16, lethal ? '#ff5040' : r.endure ? '#ffe9a0' : '#ff9a80', 'right'); }
-    } else txt(u.fixed ? 'ゲスト' : ch ? '◆' + ch.name : sel ? '先頭で歩く' : '', tx, yy + 84, 13, ch ? '#ffe6a0' : '#aaa', 'left', 'normal');
+    } else txt(u.fixed ? 'ゲスト' : u.guestHero ? 'ゲスト（同行）' : ch ? '◆' + ch.name : sel ? '先頭で歩く' : '', tx, yy + 84, 13, ch ? '#ffe6a0' : '#aaa', 'left', 'normal');
     ctx.globalAlpha = 1;
     G.buttons.push({ key: 'hero_' + id, label: S.HERO[u.k].name, x, y: y - 6, w, h: h + 6, fn: () => selectHero(id) });
   }
@@ -1991,7 +2168,7 @@
     if (hv.intent && hv.intent.k === 'select') {
       const u = S.unitById(st, hv.intent.id);
       lines.push([hv.why || (nameOf(hv.intent.id) + 'を選ぶ'), '#fff']);
-      if (!hv.why && u) lines.push([S.HERO[u.k].role + '：' + (u.fixed ? '発破（歩けない）' : S.HERO[u.k].verbName), colorOf(u.id)]);
+      if (!hv.why && u) lines.push([S.HERO[u.k].role + '：' + (u.fixed ? '発破（歩けない）' : S.verbLabel(u.k, st.up)), colorOf(u.id)]);
       if (u && u.guest && !u.safe) lines.push(['足をいためて歩けない（背負えない・縄も渡れない）。荷馬車まで歩いて下りられる道ができたら、自分で帰る', '#ffe9a0']);
       else if (u && u.guest && u.safe) lines.push(['荷馬車に着いた', '#a8ffb0']);
     } else if (p && p.ok) {
@@ -2028,24 +2205,28 @@
           if (st.raid) { const st2 = after.filter(it => it.steal).length, st1 = G.intents.filter(it => it.steal).length; if (st2 || st1) lines.push(['米俵を盗られる見こみ：' + st2 + (st2 < st1 ? '（減る）' : ''), st2 < st1 ? '#a8ffb0' : '#ffd070']); }
         }
       }
-      if (I.k === 'move') { const sf = S.surface(st, p.stand[0], p.stand[1]); lines.push(['高さ ' + sf.z + (st.mode === 'combat' ? '　（' + p.cost + '歩）' : ''), '#ccc']); }
+      if (I.k === 'move') { const sf = S.surface(st, p.stand[0], p.stand[1]); lines.push(['高さ ' + sf.z + (st.mode === 'combat' ? '　（' + p.cost + '歩）' : '') + (st.t[S.idx(st, p.stand[0], p.stand[1])] === 'n' && !sf.top ? '　深い雪（戦いでは2歩ぶん）' : ''), '#ccc']); }
+      if (I.k === 'pull' && !p.lever && (hv.pushValid || []).length > 1) lines.push(['寄ってくる向きは太い矢印。物の別の側へマウスを寄せると変わる', '#bfe0ff']);
       const me = S.unitById(st, who);
       if (p.stand && me && (p.stand[0] !== me.x || p.stand[1] !== me.y) && I.k !== 'move') lines.push(['（半透明の場所まで歩いてから）', '#aaa']);
     } else if (hv.why) {
       lines.push([hv.why, '#ffb0a0']);
       if (hv.plan && hv.plan.whyAt) lines.push(['赤い × の所でさえぎられている', '#ff9a80']);
-      if (hv.cell) { const sf = S.surface(st, hv.cell[0], hv.cell[1]); if (!sf.void) lines.push(['高さ ' + (st.t[S.idx(st, hv.cell[0], hv.cell[1])] === 'w' ? st.h[S.idx(st, hv.cell[0], hv.cell[1])] : sf.z), '#ccc']); }
+      if (hv.cell) { const sf = S.surface(st, hv.cell[0], hv.cell[1]); if (!sf.void) lines.push(['高さ ' + (st.t[S.idx(st, hv.cell[0], hv.cell[1])] === 'w' ? st.h[S.idx(st, hv.cell[0], hv.cell[1])] : sf.z) + (st.t[S.idx(st, hv.cell[0], hv.cell[1])] === 'n' && !sf.top ? '　深い雪（戦いでは2歩ぶん）' : ''), '#ccc']); }
     }
     if (hv.target && hv.target.k && !hv.target.team) {
       const o = hv.target;
-      const nm = { bridge: '跳ね橋', crate: '木箱（押せる）', block: '石のブロック（押せる・吹き飛ばせる）', iceblock: '氷のかたまり（押すとすべる）', boulder: '大岩（押すと転がっていく）', pillar: st.up.gauntlet ? '石柱（鋼の籠手で倒せる）' : '石柱（重くて動かない）', anchor: '鉄の輪（リコの鉤縄をかけられる）', target: '的（リコが射ると仕掛けが動く）', fall: '滝（セナが凍らせられる）', chest: o.item ? '大事な品' : '宝箱', crack: o.on ? '封印石（発破で砕ける）' : 'ひび割れた岩（発破で砕ける）', crystal: o.lit ? '霜の水晶（灯っている）' : '霜の水晶（セナが凍らせると灯る）' }[o.k];
+      const nm = { bridge: '跳ね橋', crate: '木箱（押せる）', block: '石のブロック（押せる・吹き飛ばせる）', iceblock: '氷のかたまり（押すとすべる）', boulder: '大岩（押すと転がっていく）', pillar: st.up.gauntlet ? '石柱（鋼の籠手で倒せる）' : '石柱（重くて動かない）', anchor: '鉄の輪（リコの鉤縄をかけられる）', target: '的（リコが射ると仕掛けが動く）', fall: '滝（セナが凍らせられる）', chest: o.item ? '大事な品' : '宝箱', crack: o.on ? '封印石（発破で砕ける）' : 'ひび割れた岩（発破で砕ける）', crystal: o.lit ? '霜の水晶（灯っている）' : '霜の水晶（セナが凍らせると灯る）',
+        icicle: 'つらら（射ると落ちる。水なら飛び石、床なら氷のかたまり、敵には傷3）', lever: o.done ? 'レバー（もう引いた）' : 'レバー（リコの引き鉤で引ける）',
+        chime: o.rung ? '風鳴り石（鳴った）' : '風鳴り石（ナギがとなりからあおぐと鳴る）' }[o.k];
       if (nm) lines.unshift([nm, '#c8c0e0']);
     }
+    if (hv.waftAlly && hv.target) lines.push(['（' + nameOf(hv.target.id) + 'を選ぶときは、札か Tab）', '#a8a0c8']);
     if (hv.target && hv.target.team === 'e') {
       const e = hv.target;
       const E = S.ENEMY[e.k];
       if (E.armor && e.flipped > 0) lines.unshift(['すき：' + (e.flipped >= 2 ? '次の手番の終わりまで' : 'この手番の終わりまで') + '、お腹が出ている（どの攻撃も +1）', '#ffe680']);
-      lines.unshift([E.name + '　体力 ' + e.hp + '/' + e.mhp + (E.fly ? '　飛ぶ' : '') + (E.heavy ? '　重い' : '') + (E.ranged ? '　弓 ' + E.range : '') + (E.raid ? '　米倉へ一直線' : '') + (E.armor ? '　甲羅（ひっくり返すと攻撃が通る）' : ''), '#ffb8a0']);
+      lines.unshift([E.name + '　体力 ' + e.hp + '/' + e.mhp + (E.fly ? '　飛ぶ' : '') + (E.heavy ? '　重い' : '') + (E.ranged ? '　弓 ' + E.range : '') + (E.raid ? '　米倉へ一直線' : '') + (E.armor ? '　甲羅（ひっくり返すと攻撃が通る）' : '') + (E.climb ? '　段を2段のぼる・群れ' : E.snow ? '　雪でも遅くならない' : ''), '#ffb8a0']);
     }
     if (!lines.length) return;
     const w = Math.max(...lines.map(l => l[0].length)) * 17 + 26, h = lines.length * 24 + 14;
@@ -2102,6 +2283,8 @@
       ['地形で倒す', '崖・谷・水のそばへ押しだすと一押しで倒せる。高い所から射ると強い'],
       ['戻す・回す', 'Z（右クリック）で一つ前に戻す（戦いは手番の中だけ）。Q・E で見る向きを回す。ホイール・右ドラッグで見わたす'],
       ['依頼を終える', '目的を果たすと「依頼達成」。右上の「ギルドへ帰る」で帰還。寄り道してから帰ってもいい'],
+      ['あおぐ（ナギ）', 'ナギを選んで、となりの軽い物・軽い敵・仲間を指すと、反対側へ2升運ぶ（2段上まで・谷も越える）。重い物とナギ自身は運べない。仲間を選ぶときは、札か Tab'],
+      ['引き鉤（第二章）', '手に入れると、リコは一直線に並んだ軽い物・軽い敵を手もとへ引ける（距離4まで・2段上まで）。レバーも引ける。戦いの中で敵を引くときは、札の上の「引く」を入れる（または Shift）'],
       ['困ったら', 'H でヒント（場所に光る印が出る）。やり直しはメニュー（Esc）。氷晶の杖を持つセナは、札の上の「氷をつくる」を入れる（または Shift を押しながら）と、床を押して氷をつくれる'],
     ];
     L.forEach((l, k) => { txt(l[0], 150, 134 + k * 44, 17, '#ffe08a'); const ws = wrap(l[1], 46); ws.forEach((w, j) => txt(w, 350, 134 + k * 44 + j * 19, 15, '#e8e0f8', 'left', 'normal')); });
@@ -2157,7 +2340,7 @@
     y += 96;
     button('sound', '音：' + (G.opt.on ? 'あり' : 'なし'), bx, y, 180, 44, toggleSound);
     txt('マウスで遊ぶ。キーボードも使える（遊んでいる間に ？ で操作の一覧）', 114, 690, 15, '#a8a0c8', 'left', 'normal');
-    txt('BEYOND ONE PROMPT 02　v0.2', 1260, 700, 14, '#8a84a8', 'right', 'normal');
+    txt('BEYOND ONE PROMPT 02　v0.3', 1260, 700, 14, '#8a84a8', 'right', 'normal');
   }
   let titleDirty = false;
   function resumeSave(sv) {
@@ -2203,12 +2386,13 @@
   // ---------- 絵の一覧（確認用） ----------
   function drawSheet() {
     ctx.fillStyle = '#2a2638'; ctx.fillRect(0, 0, 1280, 720);
-    const kinds = ['riko', 'gard', 'sena', 'tobi', 'mimoza', 'dora', 'tonbo', 'hans', 'miner', 'kid', 'elder', 'goblin', 'raider', 'archer', 'slime', 'bat', 'golem', 'wisp', 'turtle'];
+    // v0.3：第二章の絵（ナギ・ツル・ヒバ・雪小鬼・雪狼）を足した
+    const kinds = ['riko', 'gard', 'sena', 'tobi', 'nagi', 'mimoza', 'dora', 'tonbo', 'hans', 'miner', 'kid', 'elder', 'turu', 'hiba', 'goblin', 'raider', 'snowgob', 'archer', 'slime', 'bat', 'golem', 'wisp', 'wolf', 'turtle'];
     kinds.forEach((k, r) => {
       const col = r % 2, row = (r / 2) | 0;
       for (let sd = 0; sd < 2; sd++) ['idle', 'walk1', 'walk2', 'act'].forEach((p, j) => {
         const fr = SP.frame(k, sd * 3, p);
-        if (fr) ctx.drawImage(fr.c, 20 + col * 640 + (sd * 4 + j) * 70, 6 + row * 70, fr.w * 2, fr.h * 2);
+        if (fr) ctx.drawImage(fr.c, 20 + col * 640 + (sd * 4 + j) * 70, 4 + row * 59, fr.w * 2, Math.min(56, fr.h * 2));
       });
     });
   }

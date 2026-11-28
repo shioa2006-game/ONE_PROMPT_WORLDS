@@ -122,6 +122,13 @@
       case 'clang': tone('square', 1320, 1240, t, 0.001, 0.18, 0.08); tone('triangle', 1980, 1900, t, 0.001, 0.25, 0.06, A.sfxBus, true); break;
       case 'flip': tone('sawtooth', 220, 70, t, 0.005, 0.4, 0.14); noise(t, 0.5, 0.4, 'lowpass', 1200, 100, 1, true); [72, 76, 79].forEach((n, k) => tone('square', NOTE(n), NOTE(n), t + 0.25 + k * 0.06, 0.003, 0.18, 0.06)); break;
       case 'coin': tone('square', 1568, 2093, t, 0.002, 0.06, 0.05); tone('square', 2093, 2093, t + 0.05, 0.002, 0.1, 0.04); break;
+      // v0.3：引き鉤・レバー・つらら（第二章）
+      case 'hook': noise(t, 0.16, 0.18, 'bandpass', 1800, 3200, 3); tone('triangle', 700, 1300, t, 0.005, 0.1, 0.05); noise(t + 0.2, 0.12, 0.2, 'bandpass', 2600, 1200, 4); tone('square', 520, 380, t + 0.2, 0.002, 0.05, 0.05); break;
+      case 'lever': tone('square', 160, 110, t, 0.003, 0.09, 0.09); noise(t, 0.06, 0.2, 'highpass', 1600, 3000, 2); tone('square', 240, 200, t + 0.16, 0.002, 0.05, 0.06); break;
+      case 'icefall': [96, 91, 88, 84].forEach((n, k) => tone('sine', NOTE(n), NOTE(n - 2), t + k * 0.035, 0.002, 0.25, 0.05, A.sfxBus, true)); noise(t, 0.22, 0.24, 'highpass', 3000, 7000, 1); break;
+      case 'waft': noise(t, 0.35, 0.16, 'bandpass', 600, 1800, 1.2); tone('sine', 300, 520, t, 0.05, 0.3, 0.04); break;
+      case 'whoosh': noise(t, 0.45, 0.14, 'bandpass', 1400, 500, 1.5); break;
+      case 'chime': [84, 88, 91, 96, 91].forEach((n, k) => tone('sine', NOTE(n), NOTE(n), t + k * 0.09, 0.003, 0.9, 0.05, A.sfxBus, true)); noise(t, 0.6, 0.08, 'bandpass', 900, 2400, 1); break;
       case 'rank': [60, 64, 67, 72, 76, 79, 84].forEach((n, k) => tone('square', NOTE(n), NOTE(n), t + k * 0.07, 0.004, 0.35, 0.06, A.sfxBus, true)); break;
       case 'fanfare': [67, 72, 76, 79].forEach((n, k) => tone('square', NOTE(n), NOTE(n), t + k * 0.1, 0.004, k === 3 ? 0.8 : 0.2, 0.07, A.sfxBus, true)); [55, 60].forEach((n, k) => tone('triangle', NOTE(n), NOTE(n), t + 0.3 + k * 0.1, 0.01, 0.7, 0.08)); break;
       case 'rune': { const base = 76 + (o.n || 1) * 2; [0, 7, 12].forEach((d, k) => tone('sine', NOTE(base + d), NOTE(base + d), t + k * 0.06, 0.003, 0.7, 0.08, A.sfxBus, true)); break; }
@@ -140,6 +147,8 @@
     ruins: { bpm: 72, root: 49, scale: [0, 2, 3, 7, 8], pad: [[0, 7, 15], [-4, 3, 15], [-2, 5, 14], [-5, 2, 10]], lead: true, drum: false },
     battle2: { bpm: 112, root: 45, scale: [0, 2, 3, 7, 9], pad: [[0, 7, 12], [-2, 5, 10], [-4, 3, 8], [-5, 2, 7]], lead: true, drum: true },
     boss: { bpm: 96, root: 43, scale: [0, 1, 3, 7, 8], pad: [[0, 7, 12], [-4, 3, 8], [1, 8, 13], [-5, 2, 7]], lead: true, drum: true },
+    snow: { bpm: 70, root: 52, scale: [0, 2, 4, 7, 11], pad: [[0, 7, 16], [-3, 4, 12], [-5, 2, 14], [-8, 4, 11]], lead: true, drum: false },
+    village: { bpm: 80, root: 50, scale: [0, 2, 4, 7, 9], pad: [[0, 7, 16], [5, 9, 12], [-3, 4, 12], [-5, 2, 11]], lead: true, drum: false },
     guild: { bpm: 92, root: 53, scale: [0, 2, 4, 7, 9], pad: [[0, 4, 7], [5, 9, 12], [-3, 4, 9], [-5, 2, 7]], lead: true, drum: true, light: true },
   };
   A.bgm = function (name) {

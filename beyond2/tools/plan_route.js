@@ -8,7 +8,7 @@ require(path.join(__dirname, '..', 'js', 'data.js'));
 const D = globalThis.D21;
 const PL = require('./plans_lib.js');
 
-const PARTY = { GS: ['riko', 'gard', 'sena'], GT: ['riko', 'gard', 'tobi'], ST: ['riko', 'sena', 'tobi'] };
+const PARTY = { GS: ['riko', 'gard', 'sena'], GT: ['riko', 'gard', 'tobi'], ST: ['riko', 'sena', 'tobi'], GN: ['riko', 'gard', 'nagi'] };
 const HPB = { m5: 1, m6: 2 };
 const flat = (evs) => { const o = []; const w = (l) => { for (const e of l) { if (e.k === 'group') w(e.evs); else o.push(e); } }; w(evs); return o; };
 

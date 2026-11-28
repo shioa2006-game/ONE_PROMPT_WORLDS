@@ -60,10 +60,12 @@
   const TOP = {
     r: hex('#1e3a5c'), f: hex('#5e6684'), g: hex('#4f7a46'), d: hex('#7a6248'), p: hex('#8a6440'), m: hex('#a8a4b8'),
     x: hex('#3c3a4c'), i: hex('#a6dcf2'), c: hex('#8a6440'), w: hex('#24384c'), k: hex('#46465a'), s: hex('#9a8862'),
+    n: hex('#d6e0ee'),   // 深い雪（v0.3）
   };
   const FACE = {
     r: hex('#26324a'), f: hex('#454a62'), g: hex('#454a62'), d: hex('#5c4836'), p: hex('#5c4836'), m: hex('#7c788e'),
     x: hex('#4a3c46'), i: hex('#454a62'), c: hex('#454a62'), w: hex('#2c3448'), k: hex('#383848'), s: hex('#5c4e3a'),
+    n: hex('#4e5266'),
   };
   function hash(a, b, c, d) {
     let h = (a * 374761393 + b * 668265263 + c * 2147483647 + d * 1274126177) | 0;
@@ -140,6 +142,11 @@
           if (hash(px, row, x, y) > 0.94) { rr = 250; gg = 255; bb = 255; }
         }
         if (t === 'x' && hash(px, row, x, y) > 0.7) { rr -= 10; gg -= 10; bb -= 8; }
+        // 深い雪：やわらかい凹凸と、きらめき
+        if (t === 'n') {
+          if (hash(px >> 2, row >> 1, x, y + 11) > 0.72) { rr -= 16; gg -= 12; bb -= 4; }
+          if (hash(px, row, x + 5, y) > 0.965) { rr = 255; gg = 255; bb = 255; }
+        }
         if (t === 'f' && ((px + row * 2 + 4) % 16 === 0 || (px - row * 2 + 4 + 64) % 16 === 0)) { rr -= 8; gg -= 8; bb -= 6; }
         put(px, row, rr, gg, bb);
       }
@@ -160,6 +167,7 @@
           let [rr, gg, bb] = fc;
           if (t === 'i' && band === 0) { rr = 120; gg = 176; bb = 206; }
           if (t === 'g' && r < 2 + ((p * 7 + x) % 3 === 0 ? 1 : 0)) { rr = 70; gg = 112; bb = 60; }
+          if (t === 'n' && r < 3 + ((p * 5 + x) % 4 === 0 ? 1 : 0)) { rr = 196; gg = 208; bb = 226; }
           rr *= k; gg *= k; bb *= k;
           const par = (zlev & 1) ? 6 : -2;
           rr += par; gg += par; bb += par;
@@ -310,8 +318,8 @@
       ctx.fillStyle = bg.sunset ? 'rgba(255,190,150,0.16)' : 'rgba(170,190,230,0.10)';
       for (let j = 0; j < 4; j++) ellipse(ctx, cx + j * 14, cy + (j % 2) * 3, 18, 5);
     }
-    // 遠い山なみ（二重）
-    ctx.fillStyle = bg.sunset ? '#4a2c44' : '#1e2a46';
+    // 遠い山なみ（二重）。雪の地方は、峰に雪
+    ctx.fillStyle = bg.sunset ? '#4a2c44' : bg.snow ? '#4a5878' : '#1e2a46';
     for (let x = 0; x < LW; x += 2) { const h = 70 + Math.sin((x - px * 1.5) * 0.011) * 24 + Math.sin((x - px * 1.5) * 0.037) * 10; ctx.fillRect(x, LH - h - 70 + py * 0.5, 2, h + 90); }
     ctx.fillStyle = bg.ridge || '#16203a';
     for (let x = 0; x < LW; x += 2) { const h = 40 + Math.sin((x - px * 2.4) * 0.017) * 16 + Math.sin((x - px * 2.4) * 0.05) * 6 + hash(x >> 3, 1, 1, 1) * 4; ctx.fillRect(x, LH - h - 30 + py * 0.6, 2, h + 60); }
@@ -324,11 +332,24 @@
     const fog = ctx.createLinearGradient(0, LH * 0.55, 0, LH);
     fog.addColorStop(0, 'rgba(40,40,80,0)'); fog.addColorStop(1, 'rgba(24,22,44,0.5)');
     ctx.fillStyle = fog; ctx.fillRect(0, 0, LW, LH);
+    if (bg.snow) drawFlakes(ctx, t, 50, 0.45);
   }
+  // 降る雪（背景と、手前にうすく。v0.3）
+  function drawFlakes(ctx, t, n, a) {
+    for (let k = 0; k < n; k++) {
+      const sp = 10 + hash(k, 2, 9, 4) * 18;
+      const x = ((hash(k, 8, 1, 5) * 700 + Math.sin(t * 0.7 + k) * 12 - R.cam.x * 0.08) % 680 + 680) % 680 - 20;
+      const y = ((hash(k, 3, 3, 8) * 400 + t * sp) % 400) - 20;
+      ctx.fillStyle = `rgba(245,250,255,${a * (0.5 + hash(k, 1, 4, 4) * 0.5)})`;
+      ctx.fillRect(x | 0, y | 0, k % 5 === 0 ? 2 : 1, k % 5 === 0 ? 2 : 1);
+    }
+  }
+  R.drawWeather = function (ctx, sec, t) { const bg = (sec && sec.bg) || {}; if (bg.snow) drawFlakes(ctx, t + 3.7, 26, 0.55); };
 
   // ---------- 物の絵 ----------
   const OBJ_RECT = { crate: [-12, -16, 24, 20], block: [-14, -16, 28, 20], iceblock: [-14, -16, 28, 20], boulder: [-9, -16, 18, 18], pillar: [-11, -30, 22, 34],
-    anchor: [-12, -26, 10, 26], target: [-7, -21, 16, 22], lantern: [-9, -30, 18, 32], crack: [-14, -24, 28, 28], crystal: [-7, -26, 14, 28] };
+    anchor: [-12, -26, 10, 26], target: [-7, -21, 16, 22], lantern: [-9, -30, 18, 32], crack: [-14, -24, 28, 28], crystal: [-7, -26, 14, 28],
+    icicle: [-10, -31, 20, 18], lever: [-9, -22, 18, 24], chime: [-9, -28, 18, 30] };
   // ギルドの家具（指せる物）
   const DECO_RECT = { board: [-15, -40, 30, 40], shelf: [-15, -40, 30, 40], hearth: [-15, -36, 30, 38], anvil: [-10, -14, 20, 16], counter: [-15, -14, 30, 18], desk: [-15, -14, 30, 18] };
   function drawObj(ctx, st, o, t, disp, noRect) {
@@ -532,6 +553,49 @@
         break;
       }
       case 'deco': drawDeco(ctx, st, o, sx, sy, t, sel); break;
+      case 'icicle': {
+        // 升の真上（ICICLE_Z 段）に張りだした氷の棚と、ぶら下がるつらら（v0.3）
+        const [hx, hy] = proj(st, pos.x, pos.y, z + (S.ICICLE_Z || 3));
+        ctx.fillStyle = '#5a6a86'; ctx.fillRect(hx - 9, hy - 4, 18, 3);
+        ctx.fillStyle = '#c8eaff'; ctx.fillRect(hx - 9, hy - 5, 18, 1);
+        const gl = 0.5 + 0.5 * Math.sin(t * 2.5 + o.x * 1.7);
+        const spikes = [[-6, 7], [-2, 11], [2, 8], [6, 5]];
+        for (const [dx, ln] of spikes) {
+          ctx.fillStyle = '#9ad8f4'; ctx.beginPath(); ctx.moveTo(hx + dx - 2, hy - 1); ctx.lineTo(hx + dx + 2, hy - 1); ctx.lineTo(hx + dx, hy - 1 + ln); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#eafaff'; ctx.fillRect(hx + dx - 1, hy - 1, 1, (ln * 0.6) | 0);
+        }
+        ctx.fillStyle = `rgba(255,255,255,${0.3 + gl * 0.6})`; ctx.fillRect(hx - 2, hy + 3, 1, 1);
+        // 落ちる升の目じるし（うすい影）
+        ctx.fillStyle = 'rgba(160,220,255,0.18)'; ellipse(ctx, sx, sy, 8, 3);
+        if (sel) { ctx.strokeStyle = sel; ctx.lineWidth = 1; ctx.strokeRect(hx - 10.5, hy - 6.5, 21, 18); }
+        break;
+      }
+      case 'lever': {
+        // レバー（引き鉤で引く。v0.3）
+        box(ctx, sx, sy, 8, 5, '#6a6478', '#4e4a5c', '#3a3646');
+        const on = o.done || (disp && disp.leverOn);
+        ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(sx, sy - 6); ctx.lineTo(sx + (on ? -7 : 6), sy - (on ? 9 : 18)); ctx.stroke();
+        ctx.fillStyle = '#c8402e'; circle(ctx, sx + (on ? -7 : 6), sy - (on ? 9 : 18), 2.5);
+        ctx.fillStyle = '#a8a0b8'; ctx.fillRect(sx - 1, sy - 7, 3, 2);
+        if (sel) diamondLine(ctx, sx, sy - 5, 9, sel);
+        break;
+      }
+      case 'chime': {
+        // 風鳴り石：石の柱にかかった、石の管の風鈴（ナギがあおぐと鳴る。v0.3）
+        box(ctx, sx, sy, 9, 5, '#7a7688', '#5a566a', '#423e50');
+        ctx.fillStyle = '#6a667a'; ctx.fillRect(sx - 2, sy - 24, 4, 19);
+        ctx.fillStyle = '#8a869a'; ctx.fillRect(sx - 9, sy - 26, 18, 3);
+        ctx.fillStyle = '#a8a4b8'; ctx.fillRect(sx - 9, sy - 27, 18, 1);
+        const sw = o.rung ? Math.sin(t * 7 + o.x) * 1.6 : Math.sin(t * 1.1 + o.x) * 0.4;
+        for (const [dx, ln] of [[-7, 9], [-3, 12], [2, 10], [6, 8]]) {
+          ctx.fillStyle = o.rung ? '#ffe9a0' : '#9aa8c0'; ctx.fillRect((sx + dx + sw) | 0, sy - 23, 2, ln);
+          ctx.fillStyle = o.rung ? '#fff8d8' : '#c8d4e8'; ctx.fillRect((sx + dx + sw) | 0, sy - 23, 1, ln - 2);
+        }
+        if (o.rung) { const gl = 0.5 + 0.5 * Math.sin(t * 4 + o.y); ctx.fillStyle = `rgba(255,240,170,${0.25 + gl * 0.3})`; ellipse(ctx, sx, sy - 16, 12, 9); }
+        if (sel) diamondLine(ctx, sx, sy - 4, 10, sel);
+        break;
+      }
       case 'statue': {
         box(ctx, sx, sy, 10, 4, '#7a7688', '#5a566a', '#423e50');
         ctx.fillStyle = '#6a667a'; ctx.fillRect(sx - 4, sy - 16, 8, 12);
@@ -561,6 +625,36 @@
         ctx.fillStyle = '#7a5a3a';
         for (let k = -10; k <= 10; k += 5) ctx.fillRect(sx + k, sy - 9 + (k / 2 | 0) * 0, 2, 9);
         ctx.fillStyle = '#9a7a50'; ctx.fillRect(sx - 11, sy - 7, 23, 2); ctx.fillRect(sx - 11, sy - 3, 23, 1);
+        break;
+      }
+      case 'windmill': {
+        // 里の風車（風鳴り石が鳴るたびに、羽根が回りだす。v0.3）
+        ctx.fillStyle = '#6a5038'; ctx.beginPath(); ctx.moveTo(sx - 9, sy); ctx.lineTo(sx + 9, sy); ctx.lineTo(sx + 5, sy - 26); ctx.lineTo(sx - 5, sy - 26); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#8a6a48'; ctx.fillRect(sx - 4, sy - 25, 4, 24);
+        ctx.fillStyle = '#e8f0f8'; ctx.beginPath(); ctx.moveTo(sx - 7, sy - 26); ctx.lineTo(sx + 7, sy - 26); ctx.lineTo(sx, sy - 32); ctx.closePath(); ctx.fill();
+        const need = st.obj && st.obj.k === 'runes' ? (st.obj.need || 3) : 3;
+        const n = st.obj && st.obj.k === 'runes' ? S.runeCount(st) : 3;
+        const ang = n ? t * (0.8 + n * 1.1) : 0.4;
+        const cx = sx, cy = sy - 24;
+        ctx.strokeStyle = '#4a3828'; ctx.lineWidth = 2;
+        for (let k = 0; k < 4; k++) {
+          const a = ang + k * Math.PI / 2;
+          const ex = cx + Math.cos(a) * 15, ey = cy + Math.sin(a) * 15 * 0.9;
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+          ctx.fillStyle = n >= need ? '#f4ecd8' : '#d8ccb0';
+          ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 5, cy + Math.sin(a) * 4.5); ctx.lineTo(ex, ey); ctx.lineTo(ex + Math.cos(a + 1.4) * 4, ey + Math.sin(a + 1.4) * 4); ctx.closePath(); ctx.fill();
+        }
+        ctx.lineWidth = 1; ctx.fillStyle = '#c84a3a'; circle(ctx, cx, cy, 2);
+        break;
+      }
+      case 'snowtree': {
+        // 雪をかぶった針葉樹（v0.3）
+        ctx.fillStyle = '#4a3422'; ctx.fillRect(sx - 2, sy - 10, 4, 10);
+        for (let k = 0; k < 3; k++) {
+          const w = 12 - k * 3, yy = sy - 10 - k * 8;
+          ctx.fillStyle = '#244a3a'; ctx.beginPath(); ctx.moveTo(sx - w, yy); ctx.lineTo(sx + w, yy); ctx.lineTo(sx, yy - 11); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#e8f0f8'; ctx.beginPath(); ctx.moveTo(sx - w * 0.6, yy - 4); ctx.lineTo(sx + w * 0.5, yy - 5); ctx.lineTo(sx, yy - 11); ctx.closePath(); ctx.fill();
+        }
         break;
       }
       case 'rock': {
@@ -704,6 +798,8 @@
       case 'shell': ctx.fillStyle = '#6a6a5a'; ellipse(ctx, x, y + 1, 5, 3); ctx.fillStyle = '#4e7a3a'; ctx.fillRect(x - 2, y - 1, 2, 1); break;
       case 'oldbook': ctx.fillStyle = '#7a3a2a'; ctx.fillRect(x - 3, y - 3, 6, 7); ctx.fillStyle = '#e8d8b0'; ctx.fillRect(x - 2, y - 2, 1, 5); ctx.fillStyle = '#c8a040'; ctx.fillRect(x, y, 2, 1); break;
       case 'vane_s': ctx.fillStyle = '#5a4a3a'; ctx.fillRect(x, y - 1, 1, 5); ctx.fillStyle = '#b8b0a0'; ctx.fillRect(x - 3, y - 3, 6, 2); ctx.fillRect(x + 1, y - 4, 2, 1); break;
+      case 'teacup': ctx.fillStyle = '#e8e0d0'; ctx.fillRect(x - 3, y - 1, 6, 5); ctx.fillStyle = '#5a8a6a'; ctx.fillRect(x - 3, y - 1, 6, 1); ctx.fillStyle = '#c8b8a0'; ctx.fillRect(x - 2, y + 3, 4, 1); ctx.fillStyle = 'rgba(240,240,255,0.6)'; ctx.fillRect(x - 1, y - 4, 1, 2); break;
+      case 'windmill': { ctx.fillStyle = '#6a5038'; ctx.fillRect(x - 1, y - 1, 3, 6); const a = (R.time || 0) * 2.4; ctx.fillStyle = '#f4ecd8'; for (let k = 0; k < 4; k++) { const b = a + k * 1.5708; ctx.fillRect((x + Math.cos(b) * 3) | 0, (y - 2 + Math.sin(b) * 3) | 0, 2, 2); } ctx.fillStyle = '#c84a3a'; ctx.fillRect(x, y - 2, 1, 1); break; }
       case 'vane_g': ctx.fillStyle = '#5a4a3a'; ctx.fillRect(x, y - 1, 1, 5); ctx.fillStyle = '#e8c860'; ctx.fillRect(x - 3, y - 3, 6, 2); ctx.fillRect(x + 1, y - 4, 2, 1); ctx.fillStyle = '#fff4c0'; ctx.fillRect(x - 2, y - 3, 1, 1); break;
     }
     const gl = 0.5 + 0.5 * Math.sin(t * 2 + x);
