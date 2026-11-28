@@ -298,5 +298,19 @@ window.OPW_GAMES = [
     ai: 'Claude Opus 5.5',
     createdDate: '2026-11-23',
     accent: '#ffc46a'
+  },
+  {
+    title: 'だれと行く？',
+    subtitle: '風見鶏ギルドの依頼帳',
+    genre: 'ギルドRPG・クォータービュー攻略',
+    description: '丘の町カザミの 冒険者ギルド「風見鶏」。今日 はじめて 冒険者の札を もらった 斥候リコが、依頼板から 依頼を選び、同行する 仲間を 二人 選んで 出かける。押す、凍らせる、吹き飛ばす。連れていく 仲間しだいで、使える手と 攻略の 道すじが 変わる。帰るたびに 報酬と 新しい依頼が 届き、ギルドの広間が にぎやかに なっていく。',
+    path: 'game21/index.html',
+    thumbnail: 'assets/thumbs/dareto-iku.webp',
+    thumbnailSmall: 'assets/thumbs/dareto-iku-640.webp',
+    thumbnailAlt: '「だれと行く？」のプレイ画面。斜め上から見た 夕暮れの 川辺の村。左の崖の上で トビが 発破すると、大岩が 転がって 橋を わたってきた 盗っ人小鬼を なぎ倒し、「×2 まとめて倒した！」の 文字。下に リコ・ガルド・トビの 札と、「爆風で大岩が転がり、2体をなぎ倒した」の 字幕。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    createdDate: '2026-11-28',
+    accent: '#e8c860'
   }
 ];
