@@ -989,10 +989,10 @@
     { id: 'gauntlet', who: 'gard', name: '鋼の籠手', cost: 180, text: '重い相手（岩人形・大亀）を、平らな所でも押せる。石柱を倒して橋にできる', when: (p) => !!p.done.m2 },
     { id: 'bigbomb', who: 'tobi', name: '大玉の発破', cost: 160, text: '爆心の傷 +1。爆風で2マス吹き飛ばす', when: (p) => p.roster.includes('tobi') },
     // お守り（「だれと行く？」で一人に一つ持たせる）
-    { id: 'c_plate', kind: 'charm', name: 'かたい胸当て', cost: 150, text: '持たせた人の体力 +2（「だれと行く？」で、一人に一つ持たせる）', when: (p) => !!p.done.m3 },
+    { id: 'c_plate', kind: 'charm', name: 'かたい胸当て', cost: 150, text: '持たせた人の体力 +2', when: (p) => !!p.done.m3 },
     // 第二章（v0.3）
     { id: 'fan', who: 'nagi', name: '大うちわ', cost: 220, text: 'あおぐ距離 2→3。幅2の谷を越えられる。3升先の水へ木箱を置ける', when: (p) => !!p.done.m8 },
-    { id: 'c_hawk', kind: 'charm', name: '鷹の目の羽かざり', cost: 200, text: '射る・凍らせる・発破の届く距離 +1（一人に一つ持たせる）', when: (p) => !!p.done.m8 },
+    { id: 'c_hawk', kind: 'charm', name: '鷹の目の羽かざり', cost: 200, text: '射る・凍らせる・発破の届く距離 +1', when: (p) => !!p.done.m8 },
   ];
 
   // ギルドに飾るもの

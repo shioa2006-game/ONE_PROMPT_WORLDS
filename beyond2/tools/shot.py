@@ -1,6 +1,6 @@
 # GUILDWARD — 画面の撮影（Playwright + Edge ヘッドレス）
 # 使い方: python tools/shot.py OUT_DIR steps.json
-# steps: [{"js": "..."}, {"script": "tools/plans_lib.js"}, {"btn": "new"}, {"cell": [x, y]}, {"hovercell": [x, y]}, {"unit": "gard"}, {"obj": "o3"},
+# steps: [{"js": "..."}, {"script": "tools/plans_lib.js"}, {"btn": "new"}, {"wheel": 120}, {"cell": [x, y]}, {"hovercell": [x, y]}, {"unit": "gard"}, {"obj": "o3"},
 #         {"click": [x, y]}, {"move": [x, y]}, {"key": "Space"}, {"wait": 500}, {"idle": 3}, {"shot": "name"}]
 #   cell/unit/obj: 升・人・物の画面位置を G19 から聞いて、本物のマウスで押す
 #   idle: 演出が終わるまで待つ（最大 N 秒）
@@ -78,6 +78,9 @@ def run(out, steps, vw=1280, vh=720, query=''):
                 press_at(*st['click'], button=st.get('button', 'left'))
             elif 'move' in st:
                 press_at(*st['move'], hover_only=True)
+            elif 'wheel' in st:
+                # ホイール（v0.3：鍛冶屋の一覧を送る確認）。マウスの位置は、その前の move／hover のまま
+                pg.mouse.wheel(0, st['wheel'])
             elif 'key' in st:
                 pg.keyboard.press(st['key'])
             elif 'wait' in st:

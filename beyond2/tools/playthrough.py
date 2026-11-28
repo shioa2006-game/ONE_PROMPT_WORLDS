@@ -491,6 +491,18 @@ def main():
                 if hub()['panel'] == 'talk':
                     click_at(640, 560); pg.wait_for_timeout(400)
                 try:
+                    # v0.3：鍛冶屋は「一覧＋くわしく」。お守りはタブを切りかえ、品を選んでから鍛える（一覧にないときはスクロール）
+                    if pg.evaluate(f"(G21.D.SHOP.find(s => s.id === '{item}') || {{}}).kind === 'charm'"):
+                        btn('shoptab_charm')
+                    # ボタンの一覧は1コマ前のものなので、タブを押したあとは少し待ってから見る
+                    for _ in range(12):
+                        pg.wait_for_timeout(250)
+                        keys = [b['key'] for b in pg.evaluate('G21.buttons()')]
+                        if 'shopitem_' + item in keys or 'shopdown' not in keys:
+                            break
+                        btn('shopdown')
+                    btn('shopitem_' + item)
+                    shot(f'{17 + idx * 10}_{mid}_shop_{item}')
                     btn('buy_' + item)
                     print('  鍛冶屋で', item, '銀貨', pg.evaluate('G21.prof().coins'))
                 except RuntimeError as e:

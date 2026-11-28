@@ -180,7 +180,7 @@
     A.sfx('select', { f: 700 });
     if (id === 'board' || id === 'counter1' || id === 'counter2') { if (id !== 'board') return talkTo('mimoza', () => openBoard()); return openBoard(); }
     if (id === 'shelf') { H.panel = 'records'; return; }
-    if (id === 'anvil' || id === 'tonbo') return talkTo('tonbo', () => { H.panel = 'shop'; H.shopMsg = null; });
+    if (id === 'anvil' || id === 'tonbo') return talkTo('tonbo', openShop);
     if (id === 'desk' || id === 'dora') return talkDora();
     if (id === 'hearth') return talkTo('narr', null, ['暖炉の火が、ぱちぱちとはぜている。棚の上の品が、火に照らされて光っている']);
     if (id === 'banner') return talkTo('narr', null, ['ギルドの旗。リコの札の星の数だけ、金の星が縫いつけてある']);
@@ -270,7 +270,7 @@
     if (!H.panel || H.panel === 'menu') {
       const fresh = C.freshCount(G.prof);
       button('h_board', '依頼板 B', 1280 - 16 - 150, 76, 150, 46, openBoard, { pulse: fresh > 0, size: 18 });
-      button('h_shop', '鍛冶屋', 1280 - 16 - 150, 130, 150, 46, () => talkTo('tonbo', () => { H.panel = 'shop'; H.shopMsg = null; }), { size: 18 });
+      button('h_shop', '鍛冶屋', 1280 - 16 - 150, 130, 150, 46, () => talkTo('tonbo', openShop), { size: 18 });
       button('h_rec', '記録', 1280 - 16 - 150, 184, 150, 46, () => { H.panel = 'records'; }, { size: 18 });
       txt('人や依頼板を押すと、そばへ行って話す', 24, 700, 15, '#a8a0c8', 'left', 'normal');
     }
@@ -566,42 +566,96 @@
   }
 
   // ---------- 鍛冶屋 ----------
+  // v0.3：品が増えても収まるように、左に品の一覧（道具／お守りのタブ。多ければスクロール）、右に選んだ品のくわしい説明と「鍛える」
+  // （v0.2 までは一列に並べていたので、道具5・お守り2 で画面からはみ出した。二段目の道具・お守りが増えても、この形のまま並ぶ）
+  const SHOP_ROWS = 7;
+  function openShop() { H.panel = 'shop'; H.shopMsg = null; H.shopSel = null; H.shopScroll = 0; H.shopTab = null; }
+  function shopLists() {
+    const { G, C } = app();
+    const list = C.shop(G.prof);
+    // 鍛えられる品を先に、鍛えずみ（持っている）品をあとに。どちらも店に並んだ順
+    const order = (l) => l.filter(it => !it.owned).concat(l.filter(it => it.owned));
+    return { tool: order(list.filter(it => it.s.kind !== 'charm')), charm: order(list.filter(it => it.s.kind === 'charm')) };
+  }
+  function shopScrollBy(n) {
+    const L = shopLists()[H.shopTab || 'tool'] || [];
+    H.shopScroll = Math.max(0, Math.min(Math.max(0, L.length - SHOP_ROWS), (H.shopScroll || 0) + n));
+  }
+  HUB.wheel = function (dy) { if (H.panel === 'shop') shopScrollBy(dy > 0 ? 1 : -1); };
   function drawShop() {
-    const a = app(); const { G, txt, panel, button, wrap, C, S, SP, ctx, A } = a;
+    const a = app(); const { G, txt, panel, button, wrap, C, S, SP, ctx, A, D } = a;
     ctx.fillStyle = 'rgba(4,3,12,0.55)'; ctx.fillRect(0, 0, 1280, 720);
     panel(140, 40, 1000, 646, 0.95, '#9aa6ba');
     txt('トンボの鍛冶場', 180, 84, 28, '#f4ecd8');
     txt('銀貨 ' + G.prof.coins, 1100, 84, 22, '#ffe6a0', 'right');
-    const list = C.shop(G.prof);
-    let y = 100;
-    if (!list.length) txt('「まだ打てる品がないな。依頼をこなして、また来な」', 180, 160, 18, '#e8e0f8', 'left', 'normal');
-    const h = 74;
-    const row = (it) => {
-      const s = it.s, x = 180, w = 920;
-      const charm = s.kind === 'charm';
-      ctx.fillStyle = it.owned ? 'rgba(40,60,44,0.9)' : 'rgba(34,30,54,0.92)'; ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = it.owned ? '#7ac88a' : 'rgba(170,160,210,0.4)'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      if (charm) txt('◆', x + 36, y + 48, 34, '#e8c860', 'center');
-      else { const fr = SP.frame(s.who, 0, 'idle'); if (fr) { ctx.imageSmoothingEnabled = false; ctx.drawImage(fr.c, x + 14, y + 6, fr.w * 2.6, Math.min(62, fr.h * 2.6)); } }
-      txt(s.name, x + 80, y + 28, 20, '#f4ecd8');
-      txt(charm ? 'お守り' : S.HERO[s.who].name + 'の道具', x + 80 + s.name.length * 21 + 14, y + 27, 15, charm ? '#e8c860' : S.HERO[s.who].color, 'left', 'normal');
-      wrap(s.text, 42).slice(0, 2).forEach((l, k) => txt(l, x + 80, y + 50 + k * 19, 15, '#d8d0f0', 'left', 'normal'));
-      if (it.owned) txt(charm ? '持っている' : '鍛えずみ', x + w - 24, y + 44, 18, '#a8ffb0', 'right');
-      else if (it.needFirst) txt('先に' + (a.D.SHOP.find(q => q.id === it.needFirst) || {}).name + 'を', x + w - 24, y + 44, 16, '#ffb0a0', 'right');
-      else button('buy_' + s.id, '銀貨 ' + s.cost + (charm ? ' で買う' : ' で鍛える'), x + w - 230, y + 14, 210, 46, () => {
-        const r = C.buy(G.prof, s.id);
-        if (r.ok) { A.sfx('rank'); H.shopMsg = { text: charm ? '「' + s.name + '、仕上がったぜ！ だれに持たせるかは、出発のときに決めな」' : '「' + s.name + '、仕上がったぜ！ ' + S.HERO[s.who].name + 'に渡しておく」', t: G.t }; a.save(); }
-        else { A.sfx('deny'); H.shopMsg = { text: r.why, t: G.t }; }
-      }, { off: !it.afford, size: 17 });
-      if (!it.member && !it.owned) txt('（まだ仲間にいない）', x + w - 240, y + 70, 13, '#a8a0c8', 'left', 'normal');
-      y += h + 8;
+    const close = () => button('closeshop', '閉じる', 970, 640, 140, 40, () => { H.panel = null; }, { size: 17 });
+    const lists = shopLists();
+    if (!lists.tool.length && !lists.charm.length) { txt('「まだ打てる品がないな。依頼をこなして、また来な」', 180, 160, 18, '#e8e0f8', 'left', 'normal'); close(); return; }
+    if (!H.shopTab || !lists[H.shopTab].length) H.shopTab = lists.tool.length ? 'tool' : 'charm';
+    const L = lists[H.shopTab];
+    // トンボのひとこと（買ったとき・買えないときは、その返事）
+    const msg = H.shopMsg && G.t - H.shopMsg.t < 5 ? H.shopMsg.text : null;
+    txt(msg || 'トンボ「鍛えた道具は、次の依頼からすぐ使える。お守りは、出発のときに一人に一つ持たせな」', 180, 120, 15, msg ? '#ffe9a0' : '#a8a0c8', 'left', msg ? 'bold' : 'normal');
+    // タブ（道具／お守り）
+    const tab = (key, label, x) => {
+      const on = H.shopTab === key;
+      button('shoptab_' + key, label + '（' + lists[key].length + '）', x, 138, 170, 38, () => { H.shopTab = key; H.shopSel = null; H.shopScroll = 0; A.sfx('click'); },
+        { size: 16, bg: on ? 'rgba(96,84,150,0.97)' : undefined, off: !lists[key].length });
     };
-    const tools = list.filter(it => it.s.kind !== 'charm'), charms = list.filter(it => it.s.kind === 'charm');
-    if (tools.length) { txt('道具', 184, y + 20, 17, '#ffe08a'); txt('買った道具は、はずせない。持ち主が出撃すると、いつも効く', 240, y + 20, 13, '#a8a0c8', 'left', 'normal'); y += 30; for (const it of tools) row(it); }
-    if (charms.length) { txt('お守り', 184, y + 20, 17, '#ffe08a'); txt('「だれと行く？」で、一人に一つ持たせる', 256, y + 20, 13, '#a8a0c8', 'left', 'normal'); y += 30; for (const it of charms) row(it); }
-    if (H.shopMsg && G.t - H.shopMsg.t < 4) txt(H.shopMsg.text, 640, 650, 17, '#ffe9a0', 'center');
-    else txt('鍛えた道具は、次の依頼からすぐ使える。銀貨は依頼の報酬と、地図の宝箱で手に入る', 600, 650, 14, '#a8a0c8', 'center', 'normal');
-    button('closeshop', '閉じる', 980, 656, 140, 26, () => { H.panel = null; }, { size: 15 });
+    tab('tool', '道具', 180); tab('charm', 'お守り', 360);
+    // 選んでいる品（はじめは、いま鍛えられる品）
+    if (!H.shopSel || !L.some(it => it.s.id === H.shopSel)) H.shopSel = (L.find(it => !it.owned && it.afford && !it.needFirst) || L.find(it => !it.owned) || L[0]).s.id;
+    const maxScroll = Math.max(0, L.length - SHOP_ROWS);
+    H.shopScroll = Math.max(0, Math.min(maxScroll, H.shopScroll || 0));
+    // 左：品の一覧
+    const LX = 180, LW = 380, RH = 58, LY = 188;
+    L.slice(H.shopScroll, H.shopScroll + SHOP_ROWS).forEach((it, k) => {
+      const s = it.s, y = LY + k * (RH + 6), sel = H.shopSel === s.id, charm = s.kind === 'charm';
+      ctx.fillStyle = sel ? 'rgba(70,62,112,0.97)' : it.owned ? 'rgba(36,52,42,0.9)' : 'rgba(34,30,54,0.92)'; ctx.fillRect(LX, y, LW, RH);
+      ctx.strokeStyle = sel ? '#e8c860' : it.owned ? 'rgba(122,200,138,0.6)' : 'rgba(170,160,210,0.4)'; ctx.lineWidth = sel ? 3 : 1.5; ctx.strokeRect(LX + 1, y + 1, LW - 2, RH - 2);
+      if (charm) txt('◆', LX + 28, y + 40, 26, '#e8c860', 'center');
+      else { const fr = SP.frame(s.who, 0, 'idle'); if (fr) { ctx.imageSmoothingEnabled = false; ctx.drawImage(fr.c, LX + 12, y + 5, fr.w * 2, Math.min(48, fr.h * 2)); } }
+      txt(s.name, LX + 56, y + 25, 18, it.owned ? '#cfe8d4' : '#f4ecd8');
+      txt(charm ? 'お守り' : S.HERO[s.who].name + 'の道具', LX + 56, y + 47, 13, charm ? '#e8c860' : S.HERO[s.who].color, 'left', 'normal');
+      const st = it.owned ? (charm ? '持っている' : '鍛えずみ') : it.needFirst ? '先に一段目を' : '銀貨 ' + s.cost;
+      txt(st, LX + LW - 14, y + 36, 15, it.owned ? '#a8ffb0' : it.needFirst ? '#ffb0a0' : it.afford ? '#ffe6a0' : '#8a84a8', 'right');
+      G.buttons.push({ key: 'shopitem_' + s.id, label: s.name, x: LX, y, w: LW, h: RH, fn: () => { H.shopSel = s.id; A.sfx('select', { f: 620 }); } });
+    });
+    if (maxScroll > 0) {
+      const bottom = LY + SHOP_ROWS * (RH + 6) - 6;
+      button('shopup', '▲', LX + LW + 8, LY, 34, 40, () => shopScrollBy(-1), { off: H.shopScroll <= 0, size: 15 });
+      button('shopdown', '▼', LX + LW + 8, bottom - 40, 34, 40, () => shopScrollBy(1), { off: H.shopScroll >= maxScroll, size: 15 });
+      txt((H.shopScroll + 1) + '〜' + Math.min(L.length, H.shopScroll + SHOP_ROWS) + '　/ ' + L.length + '（ホイールでも送れる）', LX, bottom + 22, 13, '#a8a0c8', 'left', 'normal');
+    }
+    // 右：選んだ品のくわしい説明と「鍛える」
+    const it = L.find(q => q.s.id === H.shopSel);
+    const s = it.s, charm = s.kind === 'charm';
+    const DX = 628, DY = 188, DW = 482, DH = 440;
+    ctx.fillStyle = 'rgba(26,22,44,0.94)'; ctx.fillRect(DX, DY, DW, DH);
+    ctx.strokeStyle = it.owned ? 'rgba(122,200,138,0.7)' : 'rgba(232,200,96,0.6)'; ctx.lineWidth = 2; ctx.strokeRect(DX + 1, DY + 1, DW - 2, DH - 2);
+    if (charm) txt('◆', DX + 70, DY + 104, 72, '#e8c860', 'center');
+    else { const fr = SP.frame(s.who, 0, 'idle'); if (fr) { ctx.imageSmoothingEnabled = false; ctx.drawImage(fr.c, DX + 70 - fr.w * 2, DY + 18, fr.w * 4, Math.min(112, fr.h * 4)); } }
+    txt(s.name, DX + 140, DY + 58, 26, '#f4ecd8');
+    txt(charm ? 'お守り（一人に一つ持たせる）' : S.HERO[s.who].name + 'の道具', DX + 140, DY + 90, 15, charm ? '#e8c860' : S.HERO[s.who].color, 'left', 'normal');
+    let yy = DY + 160;
+    wrap(s.text, 27).forEach((l) => { txt(l, DX + 28, yy, 17, '#e8e0f8', 'left', 'normal'); yy += 27; });
+    yy += 10;
+    const note = charm ? '「だれと行く？」の札の下の枠で、一人に一つ持たせる。同じ物は二つとない' : '鍛えた道具は、はずせない。' + S.HERO[s.who].name + 'が出撃すると、いつも効く';
+    wrap(note, 32).forEach((l) => { txt(l, DX + 28, yy, 14, '#a8a0c8', 'left', 'normal'); yy += 21; });
+    if (charm && it.owned) { const hold = C.holder(G.prof, s.id); txt(hold ? 'いまは ' + S.HERO[hold].name + ' が持っている' : 'いまは、だれも持っていない', DX + 28, yy + 8, 14, '#ffe6a0', 'left', 'normal'); }
+    if (!it.member && !it.owned) txt('（' + S.HERO[s.who].name + 'は、まだ仲間にいない）', DX + 28, DY + DH - 92, 14, '#ffb0a0', 'left', 'normal');
+    const by = DY + DH - 72;
+    if (it.owned) txt(charm ? '持っている' : '鍛えずみ', DX + DW / 2, by + 36, 24, '#a8ffb0', 'center');
+    else if (it.needFirst) txt('先に「' + ((D.SHOP.find(q => q.id === it.needFirst) || {}).name || it.needFirst) + '」を鍛える', DX + DW / 2, by + 36, 18, '#ffb0a0', 'center');
+    else {
+      button('buy_' + s.id, '銀貨 ' + s.cost + (charm ? ' で買う' : ' で鍛える'), DX + 24, by, DW - 48, 54, () => {
+        const r = C.buy(G.prof, s.id);
+        if (r.ok) { A.sfx('rank'); H.shopMsg = { text: charm ? 'トンボ「' + s.name + '、仕上がったぜ！ だれに持たせるかは、出発のときに決めな」' : 'トンボ「' + s.name + '、仕上がったぜ！ ' + S.HERO[s.who].name + 'に渡しておく」', t: G.t }; a.save(); }
+        else { A.sfx('deny'); H.shopMsg = { text: r.why, t: G.t }; }
+      }, { off: !it.afford, size: 20, bg: it.afford ? 'rgba(110,80,30,0.95)' : undefined });
+      if (!it.afford) txt('銀貨が足りない（あと ' + (s.cost - G.prof.coins) + '）', DX + DW / 2, by - 12, 14, '#ffb0a0', 'center', 'normal');
+    }
+    close();
   }
 
   // ---------- 記録（飾り棚） ----------

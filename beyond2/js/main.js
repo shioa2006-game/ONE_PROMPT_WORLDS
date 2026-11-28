@@ -784,7 +784,7 @@
     }
   });
   cv.addEventListener('contextmenu', (ev) => ev.preventDefault());
-  cv.addEventListener('wheel', (ev) => { if (G.scene === 'play') { G.camOff[1] += ev.deltaY * 0.15; } ev.preventDefault(); }, { passive: false });
+  cv.addEventListener('wheel', (ev) => { if (G.scene === 'play') { G.camOff[1] += ev.deltaY * 0.15; } else if (G.scene === 'guild' && window.HUB21 && window.HUB21.wheel) window.HUB21.wheel(ev.deltaY); ev.preventDefault(); }, { passive: false });
   window.addEventListener('keydown', (ev) => {
     A.init();
     const k = ev.key;
@@ -2340,7 +2340,7 @@
     y += 96;
     button('sound', '音：' + (G.opt.on ? 'あり' : 'なし'), bx, y, 180, 44, toggleSound);
     txt('マウスで遊ぶ。キーボードも使える（遊んでいる間に ？ で操作の一覧）', 114, 690, 15, '#a8a0c8', 'left', 'normal');
-    txt('BEYOND ONE PROMPT 02　v0.3', 1260, 700, 14, '#8a84a8', 'right', 'normal');
+    txt('BEYOND ONE PROMPT 02　v0.3.1', 1260, 700, 14, '#8a84a8', 'right', 'normal');
   }
   let titleDirty = false;
   function resumeSave(sv) {
