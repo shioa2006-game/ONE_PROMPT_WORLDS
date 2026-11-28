@@ -14,6 +14,8 @@
   const SAVE_KEY = 'beyond2_guildward_save';
   const OPT_KEY = 'beyond2_guildward_opt';
   const QS = new URLSearchParams(location.search);
+  // 確認用（開発者向け）：URL に ?test（または ?test=倍率）を付けたときだけ、時間を速く進める（既定 4 倍）。ふつうに遊ぶときは変わらない
+  const TEST_SCALE = QS.has('test') ? Math.max(1, Math.min(10, +QS.get('test') || 4)) : 1;
   const VERBNAME = { move: '歩く', push: '押す', shoot: '射る', rope: '鉤縄をかけて渡る', freeze: '凍らせる', blast: '発破', light: '灯す', pull: '引き鉤で引く', waft: 'あおぐ' };
 
   function fit() {
@@ -1284,6 +1286,7 @@
     let dt = Math.min(0.05, (now - last) / 1000);
     if (dt < 0) dt = 0;
     last = now;
+    dt *= TEST_SCALE;
     try { update(dt); draw(); } catch (err) { console.error(err); }
     requestAnimationFrame(frame);
   }
@@ -1294,7 +1297,7 @@
     if (G.introWas && !introNow) G.introEndT = G.t;
     G.introWas = introNow;
     G.t += dt;
-    if (G.prof && (G.scene === 'play' || G.scene === 'guild') && !G.menu && !G.help) G.prof.time += dt;
+    if (G.prof && (G.scene === 'play' || G.scene === 'guild') && !G.menu && !G.help) G.prof.time += dt / TEST_SCALE;   // 遊んだ時間は、確認用の速さでも本当の時間で数える
     if (G.scene === 'play' || G.scene === 'guild') {
       stepAnim(dt);
       updateFx(dt);
@@ -2440,6 +2443,7 @@
     bubbles: () => G.bubbles.map(b => b.who + ':' + b.text),
     caption: () => G.caption && G.caption.text,
     setOpt: (o) => Object.assign(G.opt, o),
+    testScale: () => TEST_SCALE,
     lookAt: (x, y) => { const st = G.st; const u = S.unitById(st, G.sel); const [a, b] = R.rawProj(st, x, y, S.surface(st, x, y).void ? 0 : S.surface(st, x, y).z); const [c, d] = R.rawProj(st, u.x, u.y, u.z); G.camOff = [a - c, b - d + 20]; G.camLook = null; },
     goGuild,
   };

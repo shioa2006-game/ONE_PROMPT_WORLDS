@@ -139,12 +139,25 @@ python -m http.server 8102 --bind 127.0.0.1 --directory beyond2
 - `node tools/plan_route.js [m5|m6] [GS|GT|ST] [-v]` … 依頼5・依頼6を、想定攻略手順（`tools/plans_lib.js`）どおりにルールだけで通す
 - `node tools/compare.js [依頼] [方針] [--up=gauntlet,...]` … 同じ依頼を編成ごと（最大6組）に攻略し、使った手を比べる
 - `node tools/replay_pairs.js [依頼] [二人...] [--up=hook,fan] [--goal=x,y] [--depth=N]` … 受けなおしの編成で、探索の道がひらけるかを数手まで調べる
-- `python tools/playthrough.py [--fast] [--reload] [--order m1:GS,...] [--replay m1:ST] [--ch2 m7:GT,m8:ST] [--nagi-replay m4:TN] [--shots DIR]` … タイトルから第一章の結末、受けなおし、第二章の二つの依頼、新しい仲間を入れた受けなおしまで、本物のクリックとキーで通す（Playwright＋Edge）
+- `python tools/playthrough.py [--fast] [--test [倍率]] [--reload] [--order m1:GS,...] [--replay m1:ST] [--ch2 m7:GT,m8:ST] [--nagi-replay m4:TN] [--shots DIR]` … タイトルから第一章の結末、受けなおし、第二章の二つの依頼、新しい仲間を入れた受けなおしまで、本物のクリックとキーで通す（Playwright＋Edge）
+  - `--test [倍率]` … ページを `?test=倍率`（既定 4）で開き、ゲームの時間を速く進める。道具の決まった待ちも短くする
+  - `--from ch1|m7|m8 --run m8:ST,m4:TN [--equip]` … タイトルからではなく、第一章の結末まで（`ch1`）・依頼7まで（`m7`）・依頼8まで（`m8`）進めた記録から始め、`--run` に書いた依頼だけを本物のクリックで通す。記録はふつうの通しと同じ編成・同じ買い物で、ゲームのルール（依頼の達成・鍛冶屋・腕だめし帳）を使ってページの中で組み立てる（地図で拾う銀貨や受けなおしの分はないので、銀貨・印・お守りの数は、ふつうの通しより少し少ない）。`--equip` で、お守りを持たせて出る
 - `python tools/migrate_test.py --v01 DIR` … v0.1 の保存データを読みこめるかの確認（v0.1 の本体は `git archive abb2b75 beyond2` で取りだす）
 - `python tools/migrate_v02_test.py --v02 DIR` … v0.2 の保存データ（第一章の結末まで・依頼のつづき）から v0.3 で続けられるかの確認（v0.2 の本体は `git archive aaa4da5 beyond2` で取りだす）
 - `python tools/jsrun.py DIR [m1,m2] [--party ST]` … 依頼を手早く通して要所を撮る（演出のエラー探し用）
-- `python tools/shot.py DIR steps.json` … 画面の撮影
+- `python tools/shot.py DIR steps.json [?test]` … 画面の撮影
 - URL に `?sheet` を付けると、ドット絵の一覧を表示する
+- URL に `?test`（または `?test=倍率`、1〜10）を付けると、確認用にゲームの時間を速く進める（既定 4 倍）。付けなければ、ふつうに遊ぶ速さのまま。遊んだ時間の記録は、本当の時間で数える
+
+### 確かめ方の目安
+
+直した中身に合わせて、確かめる範囲を選ぶ。
+
+| 直したもの | 確かめること | かかる時間の目安 |
+|---|---|---|
+| 台詞・画面の見た目・一つの依頼の中の直し | `node tools/rules_test.js`、関係する依頼だけを `python tools/playthrough.py --fast --test --from m7 --run m8:ST` のように通す | 依頼一つで 30 秒ほど |
+| ルール・地図・ギルドの進み具合・保存 | 上に加えて `solve_check.js`・`plan_route.js`、全体の通しを `--fast --test` で | 全体の通しで 5〜6 分ほど |
+| 版を出すとき | 上のすべてと、`--test` なしの全体の通し（ふつうの速さでも同じに動くか）、保存の移行の確認（`migrate_test.py`・`migrate_v02_test.py`） | 全体の通しで 12 分ほど |
 
 ## 素材
 
