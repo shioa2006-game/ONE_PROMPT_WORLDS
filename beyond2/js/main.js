@@ -43,12 +43,17 @@
   function save() {
     if (!G.prof) return;
     try {
-      const play = G.scene === 'play' && G.st && !G.trans ? { req: G.req, st: G.st, entry: G.entry, rot: R.rot, sel: G.sel, cleared: G.cleared } : null;
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, prof: G.prof, play, firstFight: G.firstFight }));
+      const play = G.scene === 'play' && G.st && !G.trans ? { req: G.req, st: G.st, entry: G.entry, rot: R.rot, sel: G.sel, cleared: G.cleared, stampSeen: G.stampSeen || [] } : null;
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: C.SAVE_V, prof: G.prof, play, firstFight: G.firstFight }));
     } catch (e) { /* 容量など */ }
   }
+  // v0.1 の保存は、読みこむときに v0.2 の形へ移す（依頼の途中の保存だけ、ギルドからの再開になる）
   function loadSave() {
-    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return s && s.v === 1 && s.prof ? s : null; } catch (e) { return null; }
+    try {
+      const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!s || !s.prof) return null;
+      return C.migrate(s);
+    } catch (e) { return null; }
   }
 
   // ---------- 名前・話し手 ----------
@@ -71,9 +76,10 @@
     const r = D.req(reqId);
     const def = D.map(r.map);
     G.req = reqId; G.sec = def;
-    G.st = S.create(def, C.carry(G.prof, party));
+    G.st = S.create(def, C.carry(G.prof, party, reqId));
     G.entry = S.clone(G.st);
     G.cleared = false;
+    G.stampSeen = [];
     G.sel = 'riko'; R.rot = 0;
     enterPlay();
     G.banner = { text: r.kind + '　' + r.title, sub: '目的：' + r.goal, t: 0, life: 2.8, big: true };
@@ -102,7 +108,7 @@
     G.vs = S.clone(G.st);
     G.disp = {}; G.odisp = {}; G.queue = []; G.cur = null; G.busy = false;
     G.undo = []; G.fx = []; G.lines = []; G.pops = []; G.bloom = null; G.poi = []; G.caption = null; G.bubbles = []; G.narr = [];
-    G.loseMenu = false; G.menu = false; G.camOff = [0, 0]; G.hintMark = null; G.bannerQ = [];
+    G.loseMenu = false; G.menu = false; G.camOff = [0, 0]; G.hintMark = null; G.bannerQ = []; G.stampNotes = [];
     R.resetCache(G.st);
     R.goalLit = 0; R.starsLit = 0;
     const u = S.unitById(G.st, G.sel);
@@ -115,6 +121,7 @@
     const p = sv.play;
     G.req = p.req; G.sec = D.map(D.req(p.req).map);
     G.st = p.st; G.entry = p.entry || S.clone(p.st); R.rot = p.rot || 0; G.sel = p.sel || 'riko'; G.cleared = !!p.cleared;
+    G.stampSeen = (p.stampSeen || []).slice();
     enterPlay();
     const r = D.req(G.req);
     G.banner = { text: r.kind + '　' + r.title, sub: '目的：' + r.goal, t: 0, life: 2.0, big: true };
@@ -164,7 +171,7 @@
   function evDur(e) {
     switch (e.k) {
       case 'walk': if (!e._s) e._s = segs(e.path, e.slow ? 0.16 : e.enemy ? STEP_EN : (G.st && G.st.mode === 'combat' ? STEP_CB : STEP_EX)); return e._s.total;
-      case 'group': return Math.max(0, ...e.evs.map(evDur));
+      case 'group': prepGroup(e); return Math.max(0, ...e.evs.map(s => (s._delay || 0) + evDur(s)));
       case 'slide': if (!e._s) e._s = segs(e.path, (e.roll || e.slip) ? 0.075 : 0.13); return e._s.total + 0.05;
       case 'act': return 0.17;
       case 'arrow': return 0.2;
@@ -201,6 +208,8 @@
       case 'phase': return 0.32;
       case 'eatk': return 0.28;
       case 'frozenSkip': case 'flipSkip': return 0.28;
+      case 'flipUp': return 0.4;
+      case 'endure': return 0.5;
       case 'win': return 1.05;
       case 'lose': return 0.9;
       case 'found': return 0.35;
@@ -212,6 +221,22 @@
       case 'cleared': return 1.2;
       case 'drain': case 'linkShow': return 0.7;
       default: return 0;
+    }
+  }
+  // 転がる大岩の group：当てた傷（atCell つき）は、大岩がその升に来たときに見せる
+  function prepGroup(e) {
+    if (e._prep) return;
+    e._prep = true;
+    const sl = e.evs.find(s => s.k === 'slide');
+    if (!sl) return;
+    evDur(sl);
+    const n = {};
+    for (const s of e.evs) {
+      if (s.atCell === undefined) continue;
+      const j = s.atCell, L = sl._s.list;
+      const base = j >= sl.path.length || !L[j - 1] ? sl._s.total : L[j - 1].t0 + L[j - 1].d * 0.55;
+      n[j] = (n[j] || 0) + 1;
+      s._delay = base + (n[j] - 1) * 0.06;
     }
   }
   function startEv(e) {
@@ -242,7 +267,7 @@
 
   function onStart(e, c) {
     switch (e.k) {
-      case 'group': for (const s of e.evs) { s._c = { t: 0, dur: evDur(s) }; onStart(s, s._c); } break;
+      case 'group': if (e.roll) G.rollCount = 0; for (const s of e.evs) { s._c = { t: 0, dur: evDur(s) }; if (!s._delay) { s._started = true; onStart(s, s._c); } } break;
       case 'act': {
         const d = dispOf(e.id); const u = U(e.id);
         d.pose = 'act'; if (u) d.sd = R.sdir(S.faceTo(u.x, u.y, e.tx, e.ty, u.face));
@@ -286,13 +311,20 @@
       }
       case 'clang': { if (G.queue.some(q => q.k === 'flip' && q.id === e.id)) break; const u = U(e.id); if (u) { const d = G.disp[e.id] || u; popup(d.x, d.y, d.z + 3, 'カキン！', '#d8d8e8'); } A.sfx('clang'); break; }
       case 'flip': {
-        const u = U(e.id); if (u) { u.flipped = 1; const d = G.disp[e.id] || u; popup(d.x, d.y, d.z + 3.4, 'ひっくり返った！', '#ffe680', true); burst(d.x, d.y, d.z + 1, 24, '#d8d0a0', 2.4, true); }
-        A.sfx('flip'); G.shake = Math.max(G.shake, 0.55);
+        const u = U(e.id); if (u) { u.flipped = e.left || 2; const d = G.disp[e.id] || u; popup(d.x, d.y, d.z + 5.4, 'ひっくり返った！', '#ffe680', true); burst(d.x, d.y, d.z + 1, 24, '#d8d0a0', 2.4, true); burst(d.x, d.y, d.z + 2, 14, '#fff4c0', 3.2); }
+        A.sfx('flip'); G.shake = Math.max(G.shake, 0.6);
+        // はじめてのすきは、設計の字幕「ひっくり返った！ 次の手番の終わりまで、お腹が出ている」を大きく出す
+        if (G.st && G.st.mode === 'combat') setBanner(e.first
+          ? { text: 'ひっくり返った！', sub: '次の手番の終わりまで、お腹が出ている（どの攻撃も +1）', t: 0, life: 2.6, col: '#ffe680', prio: true }
+          : { text: 'すき！', sub: '次の手番の終わりまで、お腹に攻撃が通る', t: 0, life: 1.6, col: '#ffe680' });
         break;
       }
+      case 'flipUp': { const u = U(e.id); if (u) { u.flipped = 0; const d = G.disp[e.id] || u; popup(d.x, d.y, d.z + 3, '起きあがった', '#e8d8a0'); burst(d.x, d.y, d.z + 0.5, 12, '#a89c8c', 1.4, true); } A.sfx('thud', { big: 2 }); break; }
+      case 'endure': { const u = U(e.id); if (u) { const d = G.disp[e.id] || u; popup(d.x, d.y, d.z + 3.2, 'こらえた！（身がわりの木札）', '#ffe9a0', true); burst(d.x, d.y, d.z + 1.2, 16, '#f4d890', 2); } A.sfx('ding'); break; }
       case 'ko': {
         const u = U(e.id); if (!u) break;
         const d = G.disp[e.id] || u;
+        if (e.atCell !== undefined && u.team === 'e') { G.rollCount = (G.rollCount || 0) + 1; popup(d.x, d.y, d.z + 5.2, G.rollCount + '体！', '#ffe680', G.rollCount >= 3); }
         if (['hp', 'enemy', 'push', 'arrow', 'arrowHigh', 'frost', 'bump', 'fall', 'crush', 'rock', 'blast'].includes(e.how)) { burst(d.x, d.y, d.z + 1, 16, u.team === 'h' ? '#ffffff' : '#e8e0ff', 2.2); A.sfx('ko'); }
         if (e.how === 'void') A.sfx('fallaway');
         if (e.how === 'drown') { A.sfx('splash'); splash(d.x, d.y, d.z); }
@@ -307,6 +339,7 @@
       case 'open': A.sfx('door'); break;
       case 'plate': A.sfx('click'); A.sfx('ding'); break;
       case 'collect': {
+        if (e.empty) { A.sfx('click'); popup(e.x, e.y, (e.z || 0) + 3, '空っぽ（もう持ち帰った）', '#c8c0e0'); break; }
         A.sfx(e.item ? 'chest' : 'coin');
         burst(e.x, e.y, (e.z || 0) + 1, 18, '#fff0a0', 2);
         popup(e.x, e.y, (e.z || 0) + 3, e.item ? (D.ITEM[e.item] || e.item) : '銀貨 +' + e.coins, '#ffe6a0', true);
@@ -356,7 +389,7 @@
         break;
       }
       case 'frozenSkip': { const u = U(e.id); if (u) popup(u.x, u.y, u.z + 2.4, e.resist ? '凍って動けない（次は氷を振りはらう）' : '凍って動けない', '#bfefff'); break; }
-      case 'flipSkip': { const u = U(e.id); if (u) popup(u.x, u.y, u.z + 2.6, 'ひっくり返って、もがいている', '#ffe680'); break; }
+      case 'flipSkip': { const u = U(e.id); if (u) popup(u.x, u.y, u.z + 2.6, 'もがいている（次の手番も、お腹が出たまま）', '#ffe680'); break; }
       case 'win': A.sfx('win'); A.bgm(G.sec.music || 'field'); G.banner = { text: '切りぬけた！', sub: 'みんな、体勢を立てなおした', t: 0, life: 1.6, col: '#ffe08a' }; break;
       case 'lose': A.sfx('lose'); A.bgm(null); G.banner = { text: e.why === 'raid' ? '米俵を、ぜんぶ盗られた…' : 'みんな倒れた…', sub: '', t: 0, life: 99, col: '#ff8a6a' }; break;
       case 'cleared': {
@@ -374,7 +407,12 @@
 
   function onUpdate(e, p, t) {
     switch (e.k) {
-      case 'group': for (const s of e.evs) { const sp = Math.min(1, s._c.dur > 0 ? t / s._c.dur : 1); onUpdate(s, sp, Math.min(t, s._c.dur)); } break;
+      case 'group': for (const s of e.evs) {
+        const d = s._delay || 0;
+        if (!s._started) { if (t < d) continue; s._started = true; onStart(s, s._c); }
+        const lt = t - d;
+        const sp = Math.min(1, s._c.dur > 0 ? lt / s._c.dur : 1); onUpdate(s, sp, Math.min(lt, s._c.dur));
+      } break;
       case 'walk': {
         const d = dispOf(e.id); const S2 = e._s;
         const tt = Math.min(t, S2.total);
@@ -426,6 +464,8 @@
           d.z = q < 0.4 ? az : lerp(az, bz, ((q - 0.4) / 0.6) ** 2);
         } else { d.x = lerp(ax, bx, q); d.y = lerp(ay, by, q); d.z = az; }
         if (e.roll) d.roll = (d.roll || 0) + 0.25;
+        // 大岩が橋板の上を転がると、板が鳴る
+        if (e.roll && sg !== e._lastSeg) { e._lastSeg = sg; if (S.inside(G.vs, bx, by) && G.vs.t[S.idx(G.vs, bx, by)] === 'p') A.sfx('thunk'); }
         for (let k = 0; k < ix; k++) {
           const s = S2.list[k];
           if (!e._landed[k] && s.drop > 0 && !(s.a[0] === s.b[0] && s.a[1] === s.b[1])) { e._landed[k] = 1; land(s.b[0], s.b[1], s.b[2], s.drop); }
@@ -500,7 +540,7 @@
 
   function onFinish(e) {
     switch (e.k) {
-      case 'group': for (const s of e.evs) onFinish(s); break;
+      case 'group': for (const s of e.evs) { if (!s._started) { s._started = true; onStart(s, s._c || { t: 0, dur: evDur(s) }); } onFinish(s); } break;
       case 'walk': {
         const u = U(e.id); const last = e.path[e.path.length - 1];
         if (u) { u.x = last[0]; u.y = last[1]; u.z = last[2]; if (e.path.length > 1) { const a = e.path[e.path.length - 2]; u.face = S.faceTo(a[0], a[1], last[0], last[1], u.face); } }
@@ -546,7 +586,8 @@
       case 'open': { const o = O(e.o); if (o) o.open = true; delete G.odisp[e.o]; break; }
       case 'plate': { const o = O(e.o); if (o) o.done = true; break; }
       case 'collect': { const o = O(e.o); if (o) o.open = true; break; }
-      case 'flip': { const u = U(e.id); if (u) u.flipped = 1; break; }
+      case 'flip': { const u = U(e.id); if (u) u.flipped = e.left || 2; break; }
+      case 'flipUp': { const u = U(e.id); if (u) u.flipped = 0; break; }
       case 'safe': { const u = U(e.id); if (u) u.safe = true; break; }
       case 'combat': G.vs.mode = 'combat'; break;
       case 'win': G.vs.mode = 'explore'; break;
@@ -605,7 +646,20 @@
       const u = S.unitById(st, G.sel); if (!u || u.team !== 'h') G.sel = 'riko';
     }
     refresh();
+    checkStamps();
     save();
+  }
+  // 腕だめしの印：条件を満たしたら、地図の上で小さく知らせる（判定そのものは、ギルドへ帰ったとき）
+  function checkStamps() {
+    if (G.scene !== 'play' || !G.prof || !G.req) return;
+    G.stampSeen = G.stampSeen || [];
+    for (const s of C.stampLive(G.prof, G.req, G.st)) {
+      if (G.stampSeen.includes(s.id)) continue;
+      G.stampSeen.push(s.id);
+      G.stampNotes = G.stampNotes || [];
+      G.stampNotes.push({ text: '◆ 腕だめし：' + s.name, sub: '依頼を達成して帰ると、印がつく', t: 0 });
+      A.sfx('ding');
+    }
   }
 
   // 選択や状態がかわったら、表示用の情報をつくりなおす
@@ -775,9 +829,15 @@
     G.undo.push(S.clone(G.st));
     if (G.undo.length > 60) G.undo.shift();
   }
+  // 戻す・やり直しても、ヒント・戻す・やり直しの回数は減らない（成績と「ヒントを使わずに」の印のため）
+  function keepMeta(from, to) {
+    if (!from || !to) return to;
+    for (const k of ['hints', 'undo', 'retries']) to.stats[k] = Math.max(to.stats[k] || 0, from.stats[k] || 0);
+    return to;
+  }
   function undo() {
     if (G.busy || !G.undo.length) { A.sfx('deny'); return; }
-    G.st = G.undo.pop();
+    G.st = keepMeta(G.st, G.undo.pop());
     G.st.stats.undo++;
     G.vs = S.clone(G.st);
     G.disp = {}; G.odisp = {}; G.bloom = null; G.poi = [];
@@ -807,7 +867,7 @@
   }
   function retryFight() {
     if (!G.combatEntry) return;
-    G.st = S.clone(G.combatEntry);
+    G.st = keepMeta(G.st, S.clone(G.combatEntry));
     G.st.stats.retries++;
     G.loseMenu = false; G.banner = null;
     enterPlay();
@@ -817,7 +877,7 @@
   }
   function retryPhase() {
     if (!G.phaseStart) return retryFight();
-    G.st = S.clone(G.phaseStart);
+    G.st = keepMeta(G.st, S.clone(G.phaseStart));
     G.st.stats.retries++;
     G.loseMenu = false; G.banner = null;
     enterPlay();
@@ -834,11 +894,12 @@
     const def = G.sec;
     st.stats.hints++;
     if (st.mode === 'combat') {
-      const ch = (def.combatHint || [['gard', '敵を崖や水のそばへ押しだせば、一押しで片がつく。赤い線の先にいる仲間を守ろう']]).filter(h => S.unitById(st, h[0]) || h[0] === 'tb' && S.unitById(st, 'tb'));
+      // トビは、石切り場ではゲスト（tb）、仲間になってからは tobi。どちらで書いたヒントも、いるほうが話す（v0.1 では、仲間のトビのヒントが出なかった）
+      const whoOf = (w) => (w === 'tb' || w === 'tobi') ? (S.unitById(st, 'tobi') ? 'tobi' : S.unitById(st, 'tb') ? 'tb' : null) : (S.unitById(st, w) ? w : null);
+      const ch = (def.combatHint || [['gard', '敵を崖や水のそばへ押しだせば、一押しで片がつく。赤い線の先にいる仲間を守ろう']]).filter(h => whoOf(h[0]));
       if (!ch.length) { say('riko', '赤い線は敵の次の動き。崖や水のそばの敵は、押しだせば一撃だよ'); return; }
       const k = (G.hintIdx++) % ch.length;
-      const who = ch[k][0] === 'tobi' && !S.unitById(st, 'tobi') && S.unitById(st, 'tb') ? 'tb' : ch[k][0];
-      say(who, ch[k][1]);
+      say(whoOf(ch[k][0]), ch[k][1]);
       return;
     }
     const pr = S.partyReach(st);
@@ -977,6 +1038,17 @@
     }
     return p;
   }
+  // 物の、マウスを寄せた側の升で発破する計画（吹き飛ぶ向き＝寄せた側の反対）。届かなければ、ほかの側をためす
+  function blastPushPlan(st, actor, ent, hv) {
+    const want = quadDir(st, ent, G.mouse[0] / 2, G.mouse[1] / 2);
+    const tryDir = (d) => { const [dx, dy] = S.DIRS[d]; const x = ent.x - dx, y = ent.y - dy; if (!S.inside(st, x, y)) return null; const b = S.blastSet(st, x, y); if (!b.push.some(q => q.ref.o === ent.id)) return null; const p = S.plan(st, actor, { k: 'blast', x, y }); return p.ok ? p : null; };
+    const valid = [];
+    for (let d = 0; d < 4; d++) if (tryDir(d)) valid.push(d);
+    hv.pushValid = valid;
+    if (!valid.length) return null;
+    for (const d of [want, (want + 1) % 4, (want + 3) % 4, (want + 2) % 4]) if (valid.includes(d)) return tryDir(d);
+    return null;
+  }
   function NM(id) { return nameOf(id); }
   function deriveIntent(hv) {
     const st = G.st, combat = st.mode === 'combat';
@@ -1012,6 +1084,11 @@
       else if (o.k === 'target') need = 'shoot';
       else if (o.k === 'fall' || o.k === 'crystal') need = 'freeze';
       else if (o.k === 'crack') need = 'blast';
+      // 戦いの中でトビを選んで押せる物を指したら、マウスを寄せた側の升で発破して、反対へ吹き飛ばす（v0.2。押す向きの選び方と同じ）
+      if (need === 'push' && combat && S.can(st, actor, 'blast') && o.k !== 'pillar' && selU && !selU.acted) {
+        const bp = blastPushPlan(st, actor, o, hv);
+        if (bp) { hv.plan = bp; hv.actor = actor; hv.target = o; hv.blastCell = [bp.intent.x, bp.intent.y]; finishPlan(hv); return; }
+      }
       // 選んでいるのがトビで、押せる物を指しているなら「その場で発破」はしない（ふつうはガルド）
       if (need === 'push' && S.can(st, actor, 'blast') && !S.heroWith(st, 'push')) {
         hv.target = o; hv.why = '押せる仲間がいない。となりの升で発破すれば、吹き飛ばせる'; return;
@@ -1072,10 +1149,11 @@
     ['押しつぶした', '押しつぶす'], ['なぎ倒した', 'なぎ倒す'], ['押した', '押す'], ['射ぬいた', '射ぬく'], ['射た', '射る'], ['渡った', '渡る'], ['凍らせた', '凍らせる'],
     ['閉じこめた', '閉じこめる'], ['なった', 'なる'], ['凍った', '凍る'], ['落ちた', '落ちる'], ['のった', 'のる'], ['入れた', '入れる'], ['動いた', '動く'],
     ['開いた', '開く'], ['ひらいた', 'ひらく'], ['下りた', '下りる'], ['止まった', '止まる'], ['崩れた', '崩れる'], ['ひらけた', 'ひらける'], ['かかった', 'かかる'], ['ともった', 'ともる'],
-    ['砕いた', '砕く'], ['吹き飛ばした', '吹き飛ばす'], ['倒した', '倒す'], ['ひっくり返った', 'ひっくり返る'], ['はじかれた', 'はじかれる'], ['刺さった', '刺さる'], ['命中した', '命中する'], ['つくった', 'つくる'], ['発破した', '発破する'], ['光った', '光る']];
+    ['砕いた', '砕く'], ['吹き飛ばした', '吹き飛ばす'], ['倒した', '倒す'], ['ひっくり返った', 'ひっくり返る'], ['はじかれた', 'はじかれる'], ['刺さった', '刺さる'], ['命中した', '命中する'], ['つくった', 'つくる'], ['発破した', '発破する'], ['光った', '光る'],
+    ['当たった', '当たる'], ['通った', '通る'], ['ふさいだ', 'ふさぐ']];
   function fut(s) {
     let o = s.replace('（Z で戻せる）', '');
-    for (const [a, b] of FUT) o = o.split(a + '。').join(b + '。').split(a + '（').join(b + '（').split(a + '、').join(b + '、').split(a + '！').join(b + '！');
+    for (const [a, b] of FUT) o = o.split(a + '。').join(b + '。').split(a + '（').join(b + '（').split(a + '、').join(b + '、').split(a + '！').join(b + '！').split(a + '）').join(b + '）');
     for (const [a, b] of FUT) if (o.endsWith(a)) { o = o.slice(0, -a.length) + b; break; }
     return o;
   }
@@ -1134,6 +1212,7 @@
     if (G.narr.length && !(G.banner && !G.banner.small && G.banner.t < G.banner.life - 0.3)) { G.narr[0].t += dt; if (G.narr[0].t >= G.narr[0].life) G.narr.shift(); }
     if (G.caption) G.caption.t += dt;
     if (G.caption2) { G.caption2.t += dt; if (G.caption2.t > 3) G.caption2 = null; }
+    if (G.stampNotes && G.stampNotes.length) { G.stampNotes[0].t += dt; if (G.stampNotes[0].t > 3.4) G.stampNotes.shift(); }
     if (G.denyT) G.denyT = Math.max(0, G.denyT - dt);
   }
   function updateFx(dt) {
@@ -1758,18 +1837,37 @@
         const [sx, sy] = toScreen(d.x, d.y, d.z + top);
         pips(sx, sy, u.hp, u.mhp, u.boss ? '#ffb040' : '#ff7a6a', true);
         if (u.frozen > 0) txt('凍', sx + u.mhp * 3 + 6, sy + 6, 13, '#bfefff', 'left');
-        if (u.flipped > 0) txt('腹', sx + u.mhp * 3 + 6, sy + 6, 13, '#ffe680', 'left');
+        // すき（05 1.1）：いつまでお腹が出ているか（敵の手番に休むか・起きあがるかも、同じ札に）
+        if (u.flipped > 0) {
+          const lab = u.flipped >= 2 ? 'すき：次の手番の終わりまで' : 'すき：この手番の終わりまで（敵の手番で起きあがる）';
+          ctx.font = 'bold 15px ' + FONT;
+          const w = ctx.measureText(lab).width + 16;
+          ctx.fillStyle = 'rgba(24,18,8,0.78)'; ctx.fillRect(sx - w / 2, sy - 27, w, 22);
+          ctx.globalAlpha = 0.8 + 0.2 * Math.sin(G.t * 6);
+          txt(lab, sx, sy - 10, 15, '#ffe680', 'center');
+          ctx.globalAlpha = 1;
+        }
       }
       if (!G.busy && !G.loseMenu) {
         const sum = {};
         for (const it of G.intents) { if (it.target) sum[it.target] = (sum[it.target] || 0) + it.dmg; for (const a of it.also || []) sum[a.id] = (sum[a.id] || 0) + a.dmg; }
+        const res = G.intents.heroes || {};
         for (const id in sum) {
           const h = S.unitById(G.st, id); if (!h) continue;
           const [sx, sy] = toScreen(h.x, h.y, h.z + 3.3);
-          const lethal = sum[id] >= h.hp;
-          txt((lethal ? '倒される ' : '') + '−' + sum[id], sx, sy - 14, 18, lethal ? '#ff5040' : '#ff9a80', 'center');
+          const r = res[id] || {};
+          const lethal = r.ko !== undefined ? r.ko : sum[id] >= h.hp;
+          txt((lethal ? '倒される ' : r.endure ? 'こらえる ' : '') + '−' + sum[id], sx, sy - 14, 18, lethal ? '#ff5040' : r.endure ? '#ffe9a0' : '#ff9a80', 'center');
         }
         for (const it of G.intents) if (it.steal) { const e = S.unitById(G.st, it.id); if (e) { const [sx, sy] = toScreen(it.to[0], it.to[1], S.surface(G.st, it.to[0], it.to[1]).z + 3); txt('米俵 −1', sx, sy, 18, '#ffd070', 'center'); } }
+        // 敵の次の手番：逃げていく（すきの「休む・起きあがる」は、すきの札にまとめて出す）
+        for (const it of G.intents) {
+          const e = S.unitById(G.st, it.id); if (!e || e.ko || e.flipped > 0) continue;
+          const lab = it.rest ? '休む（すきのまま）' : it.rise ? '起きあがる' : it.stuck ? '逃げていく' : (it.idle && S.ENEMY[e.k].raid ? '行き場がなく、待つ' : '');
+          if (!lab) continue;
+          const [sx, sy] = toScreen(e.x, e.y, e.z + (e.k === 'turtle' ? 4.4 : 3.8));
+          txt(lab, sx, sy - 6, 15, it.rest ? '#ffe680' : it.rise ? '#ff9a80' : '#c8c0e0', 'center');
+        }
       }
     }
     // 上の帯
@@ -1811,6 +1909,7 @@
       txt(G.caption2.text, 640, 118, 24, '#ffe9a0', 'center');
       ctx.globalAlpha = 1;
     }
+    drawStampNote();
     if (G.banner) drawBanner();
     if (G.loseMenu) {
       panel(390, 260, 500, 200);
@@ -1820,6 +1919,19 @@
     }
     if (G.menu) drawMenu();
     if (G.help) drawHelp();
+  }
+  function drawStampNote() {
+    const n = G.stampNotes && G.stampNotes[0];
+    if (!n) return;
+    if (G.banner && !G.banner.small && G.banner.t < G.banner.life) { n.t = Math.min(n.t, 0.01); return; }   // 大きな見出しのあとで出す
+    const a = Math.min(1, n.t * 5, (3.4 - n.t) * 3);
+    const slide = Math.max(0, 1 - n.t * 6) * 40;
+    ctx.globalAlpha = Math.max(0, a);
+    const w = Math.max(n.text.length * 18, n.sub.length * 13) + 34, x = 1266 - w + slide, y = 118;
+    panel(x, y, w, 56, 0.92, '#e8c860');
+    txt(n.text, x + 16, y + 26, 18, '#ffe08a', 'left');
+    txt(n.sub, x + 16, y + 46, 13, '#d8d0f0', 'left', 'normal');
+    ctx.globalAlpha = 1;
   }
   function heroCard(st, id, x, y, w, k) {
     const u = S.unitById(G.st, id);
@@ -1843,10 +1955,15 @@
     const pw = Math.min(u.mhp * 9, w - (tx - x) - 62);
     pips(tx + pw / 2, yy + 60, u.hp, u.mhp, col, u.mhp > 9 || w < 180, inc);
     txt(u.hp + '/' + u.mhp, x + w - 8, yy + 69, 14, u.hp < u.mhp ? '#ffd0c0' : '#e8e4f4', 'right');
+    // 持たせたお守りの小さな印（木札を使ったあとは灰色）
+    const ch = u.charm && D.CHARMS[u.charm];
+    if (ch) txt('◆', x + 46, yy + 22, 15, u.tagUsed ? '#8a84a8' : '#ffd860', 'center');
     if (combat) {
       txt(u.ko ? '倒れている' : u.acted ? '行動ずみ' : (u.fixed ? '歩けない　行動 ○' : '移動 ' + u.mv + '　行動 ○'), tx, yy + 84, 13, u.acted || u.ko ? '#998' : '#cfe', 'left', 'normal');
-      if (inc) { txt('見こみ', x + w - 8, yy + 14, 12, '#ffb8a8', 'right', 'normal'); txt((inc >= u.hp ? '倒される ' : '') + '−' + inc, x + w - 8, yy + 32, 16, inc >= u.hp ? '#ff5040' : '#ff9a80', 'right'); }
-    } else txt(u.fixed ? 'ゲスト' : sel ? '先頭で歩く' : '', tx, yy + 84, 13, '#aaa', 'left', 'normal');
+      const r = (G.intents.heroes || {})[id] || {};
+      const lethal = r.ko !== undefined ? r.ko : inc >= u.hp;
+      if (inc) { txt('見こみ', x + w - 8, yy + 14, 12, '#ffb8a8', 'right', 'normal'); txt((lethal ? '倒される ' : r.endure ? 'こらえる ' : '') + '−' + inc, x + w - 8, yy + 32, 16, lethal ? '#ff5040' : r.endure ? '#ffe9a0' : '#ff9a80', 'right'); }
+    } else txt(u.fixed ? 'ゲスト' : ch ? '◆' + ch.name : sel ? '先頭で歩く' : '', tx, yy + 84, 13, ch ? '#ffe6a0' : '#aaa', 'left', 'normal');
     ctx.globalAlpha = 1;
     G.buttons.push({ key: 'hero_' + id, label: S.HERO[u.k].name, x, y: y - 6, w, h: h + 6, fn: () => selectHero(id) });
   }
@@ -1897,8 +2014,9 @@
         const ds = [];
         for (const id in hv.pv.dmg) { const u = S.unitById(st, id); if (u && u.team === 'e') ds.push(S.ENEMY[u.k].name + ' −' + hv.pv.dmg[id] + (hv.pv.ko.includes(id) ? '（倒れる）' : '')); }
         if (ds.length) lines.push([ds.join('　'), '#ffd0a0']);
-        if (hv.pv.flips.length) lines.push(['ひっくり返る！（次の手番うごけず、お腹に攻撃が通る）', '#ffe680']);
-        if (hv.pv.evs.some(e => e.k === 'clang') && !hv.pv.flips.length) lines.push(['甲羅ではじかれる（2段上から射るか、段から落とそう）', '#c8c8d8']);
+        if (hv.pv.flips.length) lines.push(['ひっくり返る！（次の手番の終わりまで、お腹に攻撃が通る）', '#ffe680']);
+        if (hv.pv.evs.some(e => e.k === 'clang') && !hv.pv.flips.length) lines.push(['甲羅ではじかれる（ひっくり返そう。2段上からの矢なら、すきまに傷1）', '#c8c8d8']);
+        if (hv.pv.evs.some(e => e.k === 'endure')) lines.push(['身がわりの木札で、体力1でこらえる', '#ffe9a0']);
         if (hv.pv.bloom) lines.push(['道がひらける！（' + hv.pv.bloom + 'マス）', '#a8ffb0']);
         if (hv.pv.safe.length) lines.push([hv.pv.safe.map(id => (S.unitById(st, id) || {}).name || '').join('・') + 'が、荷馬車まで帰れるようになる！', '#a8ffb0']);
         const rn = hv.pv.evs.find(e => e.k === 'rune'); if (rn) lines.push(['門の灯がともる（' + rn.n + ' / ' + (st.obj.need || 3) + '）', '#a8e8ff']);
@@ -1926,7 +2044,8 @@
     if (hv.target && hv.target.team === 'e') {
       const e = hv.target;
       const E = S.ENEMY[e.k];
-      lines.unshift([E.name + '　体力 ' + e.hp + '/' + e.mhp + (E.fly ? '　飛ぶ' : '') + (E.heavy ? '　重い' : '') + (E.ranged ? '　弓 ' + E.range : '') + (E.raid ? '　米倉へ一直線' : '') + (E.armor ? '　甲羅（落とすとひっくり返る）' : ''), '#ffb8a0']);
+      if (E.armor && e.flipped > 0) lines.unshift(['すき：' + (e.flipped >= 2 ? '次の手番の終わりまで' : 'この手番の終わりまで') + '、お腹が出ている（どの攻撃も +1）', '#ffe680']);
+      lines.unshift([E.name + '　体力 ' + e.hp + '/' + e.mhp + (E.fly ? '　飛ぶ' : '') + (E.heavy ? '　重い' : '') + (E.ranged ? '　弓 ' + E.range : '') + (E.raid ? '　米倉へ一直線' : '') + (E.armor ? '　甲羅（ひっくり返すと攻撃が通る）' : ''), '#ffb8a0']);
     }
     if (!lines.length) return;
     const w = Math.max(...lines.map(l => l[0].length)) * 17 + 26, h = lines.length * 24 + 14;
@@ -2034,10 +2153,11 @@
     }
     button('new', 'はじめから', bx, y, 420, 54, () => { A.init(); if (sv && !G.confirmNew) { G.confirmNew = G.t; return; } newGame(); }, { size: 20 });
     if (sv && G.confirmNew && G.t - G.confirmNew < 4) txt('もう一度押すと、いまの記録を消して始める', bx + 210, y + 78, 15, '#ffb0a0', 'center', 'normal');
+    else if (sv && sv.migratedPlay) txt('前の版の「依頼のつづき」は、ギルドからの再開になります', bx + 210, y + 78, 15, '#ffe0a0', 'center', 'normal');
     y += 96;
     button('sound', '音：' + (G.opt.on ? 'あり' : 'なし'), bx, y, 180, 44, toggleSound);
     txt('マウスで遊ぶ。キーボードも使える（遊んでいる間に ？ で操作の一覧）', 114, 690, 15, '#a8a0c8', 'left', 'normal');
-    txt('BEYOND ONE PROMPT 02　v0.1', 1260, 700, 14, '#8a84a8', 'right', 'normal');
+    txt('BEYOND ONE PROMPT 02　v0.2', 1260, 700, 14, '#8a84a8', 'right', 'normal');
   }
   let titleDirty = false;
   function resumeSave(sv) {
@@ -2105,7 +2225,10 @@
 
   // ---------- 確認用の口 ----------
   window.G21 = {
-    G, S, R,
+    G, S, R, C, D,
+    loadSave,
+    stampNotes: () => (G.stampNotes || []).map(n => n.text),
+    stampSeen: () => (G.stampSeen || []).slice(),
     state: () => G.st,
     prof: () => G.prof,
     scene: () => G.scene,

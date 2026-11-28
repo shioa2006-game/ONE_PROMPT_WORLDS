@@ -52,7 +52,7 @@ for (const id of ['m4', 'm5', 'm6']) {
     fight();
     for (const step of ROUTES[id][pk] || []) {
       fight();
-      if (step[2] && st.flags[step[2]]) continue;
+      if (step[2] && (step[2].startsWith('ice:') ? st.t[S.idx(st, +step[2].slice(4).split(',')[0], +step[2].slice(4).split(',')[1])] === 'i' : st.flags[step[2]])) continue;
       const p = S.plan(st, step[0], step[1]);
       if (!p.ok) { console.log('  NG', step); break; }
       tally(rec, st, step[0], step[1], S.apply(st, p));

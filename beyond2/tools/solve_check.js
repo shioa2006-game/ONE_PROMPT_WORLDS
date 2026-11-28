@@ -7,6 +7,7 @@ require(path.join(__dirname, '..', 'js', 'data.js'));
 const D = globalThis.D21;
 const BOT = require(path.join(__dirname, 'bot.js'));
 const ROUTES = require(path.join(__dirname, 'routes.js'));
+const PR = require(path.join(__dirname, 'plan_route.js'));   // m6 はボットが段取りを組めないので、想定攻略手順で戦う（v0.2）
 const PARTY = { GS: ['riko', 'gard', 'sena'], GT: ['riko', 'gard', 'tobi'], ST: ['riko', 'sena', 'tobi'] };
 
 const only = process.argv[2];
@@ -17,6 +18,8 @@ let allOk = true;
 const UP = { m1: {}, m2: {}, m3: { rope2: true }, m4: { rope2: true }, m5: { rope2: true }, m6: { rope2: true } };
 const HPB = { m1: 0, m2: 0, m3: 1, m4: 1, m5: 1, m6: 2 };
 const extra = process.argv.find(a => a.startsWith('--up='));
+// 手順をとばす条件：フラグの名前か、'ice:x,y'（その升がもう凍っている）
+const skipped = (st, c) => c.startsWith('ice:') ? (() => { const [x, y] = c.slice(4).split(',').map(Number); return st.t[S.idx(st, x, y)] === 'i'; })() : !!st.flags[c];
 for (const id of Object.keys(ROUTES)) {
   if (only && only !== id) continue;
   const def = D.MAPS[id];
@@ -29,6 +32,20 @@ for (const id of Object.keys(ROUTES)) {
     let ok = true;
     const fightNow = () => {
       if (st.mode !== 'combat') return true;
+      if (id === 'm6' && !process.argv.includes('--bot')) {
+        // 参考：ボットだけで戦った結果（ボットは段取りを組めない。手番数を難しさとみなさない）
+        const ref = BOT.fight(S.clone(st), policy, 40, false);
+        log.push('（参考：ボットだけ）' + ref.result + ' 手番' + ref.turns + ' 受けた' + ref.taken + ' 倒れた' + ref.downs);
+        const r = PR.fight(st, pk, verbose);
+        log.push('戦い（想定攻略手順）:' + (r.win ? 'win' : r.lost ? 'lose' : 'timeout') + ' 大亀を倒した手番' + r.bossTurn + ' 受けた' + r.taken + ' 倒れた' + r.downs + ' ひっくり返し' + r.flips.length + ' [' + S.heroes(st).map(h => h.id + ':' + h.hp).join(' ') + ']');
+        return r.win && r.ok;
+      }
+      if (id === 'm5') {
+        // 大岩の想定手順（右を止め、橋の出口をふさいで並ばせ、まとめて転がす）も、同じ地図の写しで試す
+        const r5 = PR.fight(S.clone(st), pk, false);
+        log.push('（大岩の想定手順）' + (r5.win ? 'win' : 'NG') + ' 大岩ひとつで最多' + r5.bestRoll + '体 米俵' + r5.sacks + ' 手番' + r5.turns + ' 受けた' + r5.taken);
+        if (!(r5.win && r5.bestRoll >= 3)) ok = false;
+      }
       const r = BOT.fight(st, policy, 40, verbose);
       log.push('戦い:' + r.result + ' 手番' + r.turns + ' 受けた' + r.taken + ' 倒れた' + r.downs + (r.sacks !== null ? ' 米俵' + r.sacks : '') + ' [' + r.hp + ']');
       return r.result === 'win';
@@ -36,7 +53,7 @@ for (const id of Object.keys(ROUTES)) {
     for (const step of ROUTES[id][pk]) {
       if (!fightNow()) { ok = false; break; }
       const [hero, intent, skipIf] = step;
-      if (skipIf && st.flags[skipIf]) { log.push('（' + skipIf + ' は済んでいる）'); continue; }
+      if (skipIf && skipped(st, skipIf)) { log.push('（' + skipIf + ' は済んでいる）'); continue; }
       const p = S.plan(st, hero, intent);
       if (!p.ok) { log.push('NG ' + hero + ' ' + JSON.stringify(intent) + ' → ' + p.why); ok = false; break; }
       const evs = S.apply(st, p);
@@ -49,7 +66,9 @@ for (const id of Object.keys(ROUTES)) {
     if (ok && !fightNow()) ok = false;
     const o = S.objective(st);
     if (!st.flags.cleared) ok = false;
-    console.log((ok ? 'OK ' : 'NG ') + id + ' ' + def.name + ' ' + pk + (st.coins ? ' 銀貨' + st.coins : '') + '\n   ' + log.join('\n   ') + '\n   目的: ' + JSON.stringify(o));
+    // この通しで満たした腕だめしの印（初回として判定。③は初回ではつかない）
+    const got = (D.STAMPS[id] || []).filter(s => { try { return s.test(st, { first: true, pair: PARTY[pk].slice(1).sort().join('+'), firstPair: null }); } catch (e) { return false; } }).map(s => s.id + '「' + s.name + '」');
+    console.log((ok ? 'OK ' : 'NG ') + id + ' ' + def.name + ' ' + pk + (st.coins ? ' 銀貨' + st.coins : '') + '\n   ' + log.join('\n   ') + '\n   目的: ' + JSON.stringify(o) + '\n   印: ' + (got.join(' ') || 'なし'));
     if (!ok) allOk = false;
   }
 }

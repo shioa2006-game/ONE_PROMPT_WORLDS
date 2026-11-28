@@ -11,6 +11,19 @@ module.exports = {
       ['sena', { k: 'freeze', x: 2, y: 2 }],                // （寄り道）池を凍らせる
       ['gard', { k: 'move', x: 2, y: 1 }],                  // 銀貨
     ],
+    // v0.2：受けなおしは自由編成（03 6.1）
+    GT: [
+      ['gard', { k: 'push', ref: { o: 'o1' }, dir: 3 }],
+      ['gard', { k: 'move', x: 9, y: 5 }],
+      ['riko', { k: 'rope', o: 'o2' }],
+    ],
+    ST: [
+      ['tobi', { k: 'blast', x: 9, y: 9 }],                 // 木箱の手前で発破 → 高い段のすぐ下へ
+      ['tobi', { k: 'move', x: 9, y: 5 }],
+      ['riko', { k: 'rope', o: 'o2' }],
+      ['sena', { k: 'freeze', x: 2, y: 2 }],                // （寄り道）
+      ['tobi', { k: 'move', x: 2, y: 1 }],
+    ],
   },
   m2: {
     GS: [
@@ -21,6 +34,15 @@ module.exports = {
       ['gard', { k: 'move', x: 5, y: 1 }],                  // 角笛
       ['riko', { k: 'shoot', ref: { o: 'o4' } }],           // （寄り道）的 → 倉の扉
       ['gard', { k: 'move', x: 0, y: 1 }],
+    ],
+    // v0.2：受けなおし。セナとトビ（ガルドとトビは堀を渡れない。VERIFICATION_v0.2.md）
+    ST: [
+      ['sena', { k: 'move', x: 6, y: 11 }],                 // 堀の手前（敵に気づかれて戦い）
+      ['sena', { k: 'freeze', x: 6, y: 9 }, 'ice:6,9'],     // 堀を凍らせる（戦いの中で凍っていれば、とばす）
+      ['sena', { k: 'move', x: 6, y: 7 }],
+      ['riko', { k: 'rope', o: 'o2' }],
+      ['tobi', { k: 'blast', x: 9, y: 2 }],                 // 台の上の木箱の奥で発破 → てっぺんのすぐ下へ
+      ['riko', { k: 'move', x: 5, y: 1 }],                  // 角笛
     ],
   },
   m3: {

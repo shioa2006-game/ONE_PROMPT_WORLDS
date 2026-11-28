@@ -1,6 +1,6 @@
 # GUILDWARD — 画面の撮影（Playwright + Edge ヘッドレス）
 # 使い方: python tools/shot.py OUT_DIR steps.json
-# steps: [{"js": "..."}, {"btn": "new"}, {"cell": [x, y]}, {"hovercell": [x, y]}, {"unit": "gard"}, {"obj": "o3"},
+# steps: [{"js": "..."}, {"script": "tools/plans_lib.js"}, {"btn": "new"}, {"cell": [x, y]}, {"hovercell": [x, y]}, {"unit": "gard"}, {"obj": "o3"},
 #         {"click": [x, y]}, {"move": [x, y]}, {"key": "Space"}, {"wait": 500}, {"idle": 3}, {"shot": "name"}]
 #   cell/unit/obj: 升・人・物の画面位置を G19 から聞いて、本物のマウスで押す
 #   idle: 演出が終わるまで待つ（最大 N 秒）
@@ -88,6 +88,9 @@ def run(out, steps, vw=1280, vh=720, query=''):
                 while time.time() - t0 < st['idle'] and pg.evaluate('G21.busy()'):
                     pg.wait_for_timeout(80)
                 pg.wait_for_timeout(st.get('after', 200))
+            elif 'script' in st:
+                # 検証用のスクリプトをページに読みこむ（例: tools/bot.js・tools/plans_lib.js）
+                pg.add_script_tag(path=os.path.join(ROOT, st['script']))
             elif 'shot' in st:
                 pg.screenshot(path=os.path.join(out, st['shot'] + '.png'))
         br.close()

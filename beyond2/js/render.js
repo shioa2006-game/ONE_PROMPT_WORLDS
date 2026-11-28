@@ -615,8 +615,9 @@
         ctx.fillStyle = '#6a4a2e'; ctx.fillRect(sx - 13, sy - 39, 26, 38);
         ctx.fillStyle = '#3e2a1a'; for (let k = 0; k < 3; k++) ctx.fillRect(sx - 13, sy - 27 + k * 12, 26, 2);
         const tr = R.trophies || [];
+        const cols = tr.length > 6 ? 3 : 2;   // 7つめからは、一段に三つ並べる
         tr.forEach((id, k) => {
-          const tx = sx - 8 + (k % 2) * 14, ty = sy - 30 + ((k / 2) | 0) * 12;
+          const tx = cols === 3 ? sx - 9 + (k % 3) * 9 : sx - 8 + (k % 2) * 14, ty = sy - 30 + ((k / cols) | 0) * 12;
           drawTrophy(ctx, id, tx, ty, t);
         });
         if (sel) { ctx.strokeStyle = sel; ctx.strokeRect(sx - 14.5, sy - 40.5, 29, 41); }
@@ -701,6 +702,9 @@
       case 'tablet': ctx.fillStyle = '#7a8a9a'; ctx.fillRect(x - 3, y - 4, 6, 8); ctx.fillStyle = '#a8e0ff'; ctx.fillRect(x - 2, y - 2, 4, 1); ctx.fillRect(x - 2, y, 3, 1); break;
       case 'banner': ctx.fillStyle = '#3a7a5a'; ctx.fillRect(x - 3, y - 4, 7, 7); ctx.fillStyle = '#f4d860'; ctx.fillRect(x - 1, y - 2, 3, 3); break;
       case 'shell': ctx.fillStyle = '#6a6a5a'; ellipse(ctx, x, y + 1, 5, 3); ctx.fillStyle = '#4e7a3a'; ctx.fillRect(x - 2, y - 1, 2, 1); break;
+      case 'oldbook': ctx.fillStyle = '#7a3a2a'; ctx.fillRect(x - 3, y - 3, 6, 7); ctx.fillStyle = '#e8d8b0'; ctx.fillRect(x - 2, y - 2, 1, 5); ctx.fillStyle = '#c8a040'; ctx.fillRect(x, y, 2, 1); break;
+      case 'vane_s': ctx.fillStyle = '#5a4a3a'; ctx.fillRect(x, y - 1, 1, 5); ctx.fillStyle = '#b8b0a0'; ctx.fillRect(x - 3, y - 3, 6, 2); ctx.fillRect(x + 1, y - 4, 2, 1); break;
+      case 'vane_g': ctx.fillStyle = '#5a4a3a'; ctx.fillRect(x, y - 1, 1, 5); ctx.fillStyle = '#e8c860'; ctx.fillRect(x - 3, y - 3, 6, 2); ctx.fillRect(x + 1, y - 4, 2, 1); ctx.fillStyle = '#fff4c0'; ctx.fillRect(x - 2, y - 3, 1, 1); break;
     }
     const gl = 0.5 + 0.5 * Math.sin(t * 2 + x);
     if (gl > 0.92) { ctx.fillStyle = '#fffbe0'; ctx.fillRect(x + 3, y - 4, 1, 1); }
@@ -871,6 +875,14 @@
     // 手前でふさぐ柱をうすくする目印
     const foc = view.focus ? proj(st, view.focus[0], view.focus[1], view.focus[2]) : null;
     const focS = view.focus ? (() => { const [u, v] = rotXY(st, view.focus[0], view.focus[1]); return Math.round(u) + Math.round(v); })() : 0;
+    // 大岩（仕掛け）の手前で高い升がふさいでいたら、その升もうすくする（v0.2。依頼5の飛び石の大岩が、右の丘のかげに隠れていた）
+    const xray = [];
+    if (!R.hubPick) for (const o of st.objs) {
+      if (o.gone || o.k !== 'boulder') continue;
+      const [u, v] = rotXY(st, o.x, o.y);
+      const [px, py] = proj(st, o.x, o.y, o.z || 0);
+      xray.push({ s: Math.round(u) + Math.round(v), x: px, y: py, z: o.z || 0 });
+    }
     // 仲間をふさぐ物だけを写しとる（あとで、隠れた部分だけを透かす）
     const masks = [];
     const faded = new Set();
@@ -899,6 +911,7 @@
           const [sx, sy] = proj(st, x, y, col.top);
           let fade = false;
           if (foc && s > focS && sy - 8 < foc[1] - 4 && Math.abs(sx - foc[0]) < 28 && col.top > view.focus[2] + 1 && sy + 8 + Math.max(col.dl, col.dr) * 8 > foc[1] - 26) fade = true;
+          if (!fade) for (const r of xray) if (s > r.s && col.top > r.z + 1 && Math.abs(sx - r.x) < 34 && sy - 8 < r.y + 6 && sy + 8 + Math.max(col.dl, col.dr) * 8 > r.y - 20) { fade = true; break; }
           if (fade) faded.add(i);
           if (fade) ctx.globalAlpha = 0.35;
           ctx.drawImage(col.cv, sx - 16, sy - 8);

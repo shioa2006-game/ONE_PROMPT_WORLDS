@@ -143,7 +143,7 @@ function planPhase(st, policy) {
   return out;
 }
 
-const API = { fight, choose, evalState, playerPhase, planPhase };
+const API = { fight, choose, evalState, playerPhase, planPhase, candidates };
 if (IN_PAGE) { window.BOT21 = API; return; }
 module.exports = API;
 })();

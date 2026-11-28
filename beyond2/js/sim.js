@@ -21,8 +21,12 @@
     bat: { name: '洞コウモリ', hp: 2, mov: 4, atk: 1, range: 1, fly: true },
     golem: { name: '岩人形', hp: 7, mov: 2, atk: 2, range: 1, heavy: true },
     wisp: { name: '水霊', hp: 3, mov: 3, atk: 2, range: 3, ranged: true, swim: true },
-    turtle: { name: '岩喰い大亀', hp: 12, mov: 2, atk: 3, range: 1, heavy: true, armor: true, slam: true, big: true },
+    turtle: { name: '岩喰い大亀', hp: 22, mov: 2, atk: 3, range: 1, heavy: true, armor: true, slam: true, big: true },
   };
+  // お守りの効果（一人に一つ。新しい働きかけは持たせない）。名前と手に入れ方は data.js の CHARMS
+  const CHARM_FX = { c_plate: { hp: 2 }, c_tag: { endure: 1 }, c_tabi: { mov: 1 } };
+  // 行き場がなくなった敵が逃げるまでの手番（盗っ人だけ長い。05 1.4）
+  const STUCK = { normal: 2, raid: 4 };
   const NPC = {
     miner: { name: '鉱夫' }, tobi: { name: 'トビ' }, kid: { name: '子ども' },
   };
@@ -47,8 +51,12 @@
   function heroWith(st, verb) { const u = st.units.find(h => isHero(h) && !h.ko && HERO[h.k].verbs.indexOf(verb) >= 0); return u ? u.id : null; }
 
   function newStats() {
-    return { acts: {}, kills: {}, combos: 0, turns: 0, fights: 0, undo: 0, hints: 0, retries: 0, steps: 0 };
+    // foeKo: 倒した敵の種類と倒れ方／downs: 倒れた仲間の数／bestRoll: 大岩ひとつで倒した最多／boulderFlip: 大岩でひっくり返した回数
+    // fightLen: 戦いごとの手番数／bossTurn: 強敵を倒した手番（腕だめしの印の判定に使う）
+    return { acts: {}, kills: {}, combos: 0, turns: 0, fights: 0, undo: 0, hints: 0, retries: 0, steps: 0,
+      foeKo: [], downs: 0, bestRoll: 0, boulderFlip: 0, fightLen: {}, bossTurn: 0 };
   }
+  function movOf(u) { return u.mov !== undefined ? u.mov : (HERO[u.k] ? HERO[u.k].mov : 0); }
 
   // ---------- 依頼の地図をつくる ----------
   // carry: { party:['riko','gard','sena'], up:{bow,rope2,gauntlet,staff,bigbomb}, hpb: ランクによる体力の上のせ }
@@ -86,11 +94,20 @@
       if (ob.k === 'bridge' && ob.z === undefined) ob.z = 0;
       st.objs.push(ob);
     }
+    // 受けなおし：前に持ち帰った宝箱は空（05 1.7）
+    for (const cid of carry.taken || []) { const o = st.objs.find(q => q.id === cid); if (o && o.k === 'chest') o.taken = true; }
+    const charms = carry.charms || {};
     (def.start || []).forEach((p, k) => {
       const id = party[k];
       if (!id) return;
-      const hp = HERO[id].hp + st.hpb;
-      st.units.push({ id, k: id, team: 'h', x: p[0], y: p[1], z: 0, hp, mhp: hp, mv: HERO[id].mov, acted: false, frozen: 0, ko: false, face: p[2] === undefined ? 3 : p[2] });
+      const cid = charms[id] && CHARM_FX[charms[id]] ? charms[id] : null;
+      const fx = cid ? CHARM_FX[cid] : {};
+      const hp = HERO[id].hp + st.hpb + (fx.hp || 0);
+      const mov = HERO[id].mov + (fx.mov || 0);
+      const u = { id, k: id, team: 'h', x: p[0], y: p[1], z: 0, hp, mhp: hp, mov, mv: mov, acted: false, frozen: 0, ko: false, face: p[2] === undefined ? 3 : p[2] };
+      if (cid) u.charm = cid;
+      if (fx.endure) u.tag = 1;          // 身がわりの木札：依頼ごとに一度だけ、倒れる傷を体力1でこらえる
+      st.units.push(u);
     });
     for (const n of def.npcs || []) {
       st.units.push({ id: n.id, k: n.k, team: 'n', x: n.x, y: n.y, z: 0, hp: 9, mhp: 9, mv: 0, acted: true, frozen: 0, ko: false, face: n.face === undefined ? 1 : n.face, name: n.name || (NPC[n.k] || {}).name, guest: n.guest || null, found: !!n.found, safe: false, rescue: n.rescue !== false, foundSay: n.foundSay || null, safeSay: n.safeSay || null, onFound: n.onFound || null, sit: !!n.sit });
@@ -103,6 +120,9 @@
     st.trig = clone(def.trig || []);
     st.fightSay = clone(def.fightSay || {});
     st.winSay = clone(def.winSay || {});
+    st.capAt = clone(def.capAt || {});          // 大岩が止まった升ごとの字幕（m5 の栓など）
+    st.flipSay = clone(def.flipSay || null);    // はじめてひっくり返したときのひとこと
+    st.rollSay = clone(def.rollSay || null);    // 大岩でまとめて倒したときのひとこと
     st.drains = clone(def.drains || []);
     st.waves = clone(def.waves || []);
     st.raid = def.raid ? { cells: clone(def.raid.cells), sacks: def.raid.sacks, max: def.raid.sacks } : null;
@@ -226,6 +246,8 @@
         if (!opt.ignoreUnits) {
           const o = unitAt(st, nx, ny, u);
           if (o && o.team !== u.team && !(isHero(u) && isNpc(o)) && !(isNpc(u) && isHero(o))) continue;
+          // 凍った敵は、ほかの敵の通り道もふさぐ（「凍らせて通せんぼ」。v0.1 の資料とヒントのとおりに直した。飛ぶ敵は上を越える）
+          if (o && isFoe(u) && isFoe(o) && (o.frozen > 0 || o.iceHold) && !flying) continue;
         }
         const s = surface(st, nx, ny);
         dist.set(ni, { c: nc, p: cur, z: s.void ? cd.z : s.z });
@@ -502,7 +524,8 @@
         evs.push({ k: 'walk', id: u.id, path: xyz });
         st.stats.steps += xyz.length - 1;
       } else {
-        partyWalk(st, u, p.path, evs);
+        // ついてくる仲間は、この行動で動く物・敵の通り道と行き先の升に止まらない（05 1.6）
+        partyWalk(st, u, p.path, evs, p.intent.k !== 'move' ? actionCells(st, p) : null);
         const ce = evs.find(e => e.k === 'combat');
         if (ce) {
           if (p.intent.k !== 'move') ce.cancel = { who: u.id, verb: VERB[p.intent.k] || '行動' };
@@ -547,8 +570,34 @@
     u.x = x; u.y = y; u.z = standZ(st, x, y, u);
   }
 
+  // 行動で動く物・敵の通り道と行き先（ついてくる仲間を立たせない升）。仲間がいないものとして写しで試す
+  function actionCells(st, p) {
+    const out = new Set();
+    try {
+      const c = clone(st);
+      c.units = c.units.filter(x => !(isHero(x) && x.id !== p.hero && !x.fixed));
+      const u = unitById(c, p.hero);
+      u.x = p.stand[0]; u.y = p.stand[1]; u.z = standZ(c, u.x, u.y, u);
+      const evs = [], credit = { who: [u.id], text: '', kills: 0, combo: false, big: 0 };
+      const I = p.intent;
+      if (I.k === 'push') doPush(c, u, I.ref, I.dir, evs, credit);
+      else if (I.k === 'blast') doBlast(c, u, I, evs, credit);
+      else if (I.k === 'freeze') doFreeze(c, u, I, evs, credit, p);
+      else return out;
+      const walk = (l) => { for (const e of l) {
+        if (e.k === 'group') walk(e.evs);
+        else if (e.k === 'slide') for (let k = 1; k < e.path.length; k++) out.add(idx(st, e.path[k][0], e.path[k][1]));
+        else if (e.k === 'fall' && e.to) out.add(idx(st, e.to[0], e.to[1]));
+        else if (e.k === 'topple') for (const b of e.beams) out.add(idx(st, b.x, b.y));
+        else if (e.k === 'iceblock' && e.o) out.add(idx(st, e.o.x, e.o.y));
+      } };
+      walk(evs);
+    } catch (err) { /* 試せなければ、ふつうに歩く */ }
+    return out;
+  }
+
   // 探索中の移動：選んだ一人が先頭で歩き、仲間がついてくる
-  function partyWalk(st, lead, path, evs) {
+  function partyWalk(st, lead, path, evs, avoid) {
     const W = st.W;
     let cut = path.length;
     for (let k = 1; k < path.length; k++) {
@@ -566,6 +615,7 @@
     const taken = new Set([end]);
     for (const o of st.objs) if (!o.gone && (PUSHABLE.includes(o.k) || o.k === 'anchor' || o.k === 'chest')) taken.add(idx(st, o.x, o.y));
     for (const u of st.units) if (!u.ko && (isNpc(u) || u.fixed)) taken.add(idx(st, u.x, u.y));
+    if (avoid) for (const i of avoid) taken.add(i);
     const trail = path.slice(0, -1).reverse();
     const goals = [];
     const nearMap = reach(st, lead, { ignoreUnits: true, max: 3, noLinks: true });
@@ -607,11 +657,19 @@
     for (const e of enemies(st)) if (e.grp === grp && !e.ko) e.active = true;
     st.mode = 'combat'; st.turn = 1; st.grp = grp;
     st.stats.fights++;
-    for (const h of heroes(st)) { h.acted = false; h.mv = h.fixed ? 0 : HERO[h.k].mov; }
+    for (const h of heroes(st)) { h.acted = false; h.mv = h.fixed ? 0 : movOf(h); }
     evs.push({ k: 'combat', grp });
     const def = st.fightSay && st.fightSay[grp];
-    if (def) for (const s of def) evs.push({ k: 'say', who: s[0], text: s[1] });
+    if (def) for (const s of def) { const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
   }
+  // 'gard|tobi' のように書いた話し手は、編成にいる最初の一人（だれもいなければ出さない）
+  function speaker(st, who) {
+    if (who.indexOf('|') < 0) return who;
+    for (const w of who.split('|')) { const u = unitById(st, w); if (u && !u.ko) return w; }
+    return null;
+  }
+  // 台詞は文字列か、話し手ごとの言いまわし { gard: '…', tobi: '…' }
+  function sayText(s, who) { return typeof s[1] === 'string' ? s[1] : (s[1][who] || ''); }
 
   function collectAt(st, u, evs) {
     if (!isHero(u)) return;
@@ -619,6 +677,13 @@
       if (o.gone || o.k !== 'chest' || o.open) continue;
       if (o.x === u.x && o.y === u.y) {
         o.open = true;
+        // 依頼の目的の品（角笛・石板）は報酬ではないので、受けなおしでも毎回ある
+        const goal = st.obj && o.item && st.obj.item === o.item;
+        if (o.taken && !goal) {
+          evs.push({ k: 'collect', o: o.id, item: null, coins: 0, empty: true, by: u.id, x: o.x, y: o.y, z: o.z });
+          evs.push({ k: 'caption', who: [u.id], text: '宝箱は空だった（前に来たとき、もう持ち帰った）' });
+          continue;
+        }
         if (o.item) { st.items.push(o.item); if (o.up) st.up[o.up] = true; }
         if (o.coins) st.coins += o.coins;
         st.found.push(o.id);
@@ -647,24 +712,45 @@
     if (isFoe(u) && ENEMY[u.k].armor && why !== 'enemy') {
       if (!(u.flipped > 0)) {
         if (why === 'fall' || why === 'crush' || why === 'rock') { flip(st, u, evs, credit); n = 2; }
-        else if (why === 'arrowHigh') { if (credit) credit.gap = true; }
+        // 甲羅のすきまに刺さる高所の矢は、傷1に固定（05 1.2。風切りの弓で2）
+        else if (why === 'arrowHigh') { if (credit) credit.gap = true; n = 1 + (st.up.bow2 ? 1 : 0); }
         else { evs.push({ k: 'clang', id: u.id }); if (credit) credit.clang = (credit.clang || 0) + 1; return; }
-      } else if (why !== 'fall') n += 1; // ひっくり返ったお腹は、やわらかい
+      } else if (why !== 'fall') n += 1; // ひっくり返ったお腹は、やわらかい（重ねても、すきは延びない）
+    }
+    // 身がわりの木札：倒れる傷を、依頼ごとに一度だけ体力1でこらえる
+    if (isHero(u) && u.tag && !u.tagUsed && u.hp - n <= 0) {
+      n = u.hp - 1; u.tagUsed = true;
+      evs.push({ k: 'endure', id: u.id });
+      if (n <= 0) return;
     }
     u.hp -= n;
     evs.push({ k: 'dmg', id: u.id, n, why, hp: Math.max(0, u.hp) });
     if (u.hp <= 0) ko(st, u, why, evs, credit);
   }
+  // すき：次の自分の手番の終わりまで（05 1.1）。flipped は「残りの自分の手番の数」。
+  // 自分の手番にできたら 2（直後の敵の手番は休み、次の自分の手番の終わりまで）。敵の手番にできたら 1
   function flip(st, u, evs, credit) {
-    u.flipped = 1; u.frozen = 0;
-    evs.push({ k: 'flip', id: u.id });
+    u.flipped = st.phase === 'enemy' ? 1 : 2; u.frozen = 0;
+    const ev = { k: 'flip', id: u.id, left: u.flipped };
+    evs.push(ev);
     if (credit) credit.flip = true;
+    if (!st.said.flip1) {
+      st.said.flip1 = 1;
+      ev.first = true;      // 画面では、はじめてのすきに「次の手番の終わりまで、お腹が出ている」を大きく出す
+      if (credit) credit.firstFlip = true;
+      for (const s of st.flipSay || []) { const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
+    }
   }
   function ko(st, u, how, evs, credit) {
     if (u.ko) return;
     u.ko = true; u.hp = Math.max(0, u.hp);
     if (how === 'void' || how === 'drown' || how === 'ice' || !isHero(u)) u.gone = true;
     evs.push({ k: 'ko', id: u.id, how });
+    if (isFoe(u)) {
+      st.stats.foeKo = st.stats.foeKo || [];
+      st.stats.foeKo.push({ k: u.k, how });
+      if (u.boss) st.stats.bossTurn = st.turn;
+    } else if (isHero(u)) st.stats.downs = (st.stats.downs || 0) + 1;
     if (isFoe(u) && credit) {
       credit.kills++;
       st.stats.kills[credit.who[0]] = (st.stats.kills[credit.who[0]] || 0) + 1;
@@ -695,6 +781,8 @@
     const path = [[x, y, z]];
     const ref2 = isU ? { u: ent.id } : { o: ent.id };
     let end = 'stop', bumpInto = null, steps = 0, iceUsed = false, crushed = 0, pushes = 0;
+    let rollKills = 0, rollHit = null, noMomentum = null;
+    const hits = [];   // 転がる大岩が通りがかりに当てた傷（演出では、大岩がその升に来たときに見せる）
     const flyer = isU && fly(ent);
     const maxPush = opt.dist || 1;
     while (steps++ < 40) {
@@ -718,15 +806,28 @@
       if (top > z) { end = 'bump'; bumpInto = s.block || 'wall'; break; }
       if (occ) {
         if (occ.z >= z - 1) {
-          if (roll && isFoe(occ)) {
+          // 転がる物は、1升以上転がってから当たったときだけ傷を与え、すきを作る（05 1.3）
+          if (roll && isFoe(occ) && pushes >= 1) {
+            const h0 = evs.length, wasFlipped = occ.flipped > 0;
             hurt(st, occ, 3, 'crush', evs, credit); crushed++;
-            if (occ.ko) { x = nx; y = ny; z = s.z; path.push([x, y, z]); continue; }
-          }
+            const hit = evs.splice(h0);
+            if (!wasFlipped && occ.flipped > 0) st.stats.boulderFlip = (st.stats.boulderFlip || 0) + 1;
+            if (occ.ko) {
+              rollKills++;
+              x = nx; y = ny; z = s.z; path.push([x, y, z]);
+              for (const h of hit) { h.atCell = path.length - 1; hits.push(h); }
+              continue;
+            }
+            for (const h of hit) { h.atCell = path.length; hits.push(h); }
+            rollHit = occ;
+          } else if (roll && isFoe(occ)) noMomentum = occ;
           end = 'bump'; bumpInto = occ; break;
         }
         if (!isU) {
           path.push([nx, ny, z]);
-          evs.push({ k: 'slide', ref: ref2, path: path.slice(), roll });
+          const sl0 = { k: 'slide', ref: ref2, path: path.slice(), roll };
+          evs.push(hits.length ? { k: 'group', evs: [sl0].concat(hits), roll: true } : sl0);
+          if (rollKills) st.stats.bestRoll = Math.max(st.stats.bestRoll || 0, rollKills);
           if (isFoe(occ)) hurt(st, occ, 3, 'rock', evs, credit);
           if (occ.ko || !isFoe(occ)) { ent.x = nx; ent.y = ny; ent.z = s.z; if (!occ.ko) { ent.gone = true; evs.push({ k: 'break', ref: ref2, x: nx, y: ny, z: occ.z + 2 }); } else { evs.push({ k: 'fall', ref: ref2, from: [nx, ny, z], to: [nx, ny, s.z], drop: z - s.z }); afterLand(st, ent, evs, credit); } }
           else { ent.gone = true; evs.push({ k: 'break', ref: ref2, x: nx, y: ny, z: occ.z + 2 }); }
@@ -752,7 +853,17 @@
     const riders = isU ? [] : st.objs.filter(o => !o.gone && o !== ent && o.x === ox && o.y === oy && o.z > oz && o.k !== 'plate');
     ent.x = x; ent.y = y; ent.z = Math.max(z, -99);
     const moved = path.length > 1;
-    if (moved) evs.push({ k: 'slide', ref: ref2, path, roll, slip: slip || iceUsed });
+    if (moved) {
+      const sl = { k: 'slide', ref: ref2, path, roll, slip: slip || iceUsed };
+      evs.push(hits.length ? { k: 'group', evs: [sl].concat(hits), roll: true } : sl);
+    }
+    if (rollKills) {
+      st.stats.bestRoll = Math.max(st.stats.bestRoll || 0, rollKills);
+      if (rollKills >= 3 && st.rollSay && !st.said.bigRoll) {
+        st.said.bigRoll = 1;
+        for (const s of st.rollSay) { const who = speaker(st, s[0]); if (who) evs.push({ k: 'say', who, text: sayText(s, who) }); }
+      }
+    }
     if (moved) for (const rd of riders) {
       const dz = rd.z - oz;
       rd.x = x; rd.y = y; rd.z = ent.z + dz;
@@ -763,7 +874,8 @@
     if (end === 'bump') {
       evs.push({ k: 'bump', ref: ref2, dir, x, y, z });
       if (isU) hurt(st, ent, 1, 'bump', evs, credit);
-      if (bumpInto && bumpInto.team && isFoe(bumpInto)) hurt(st, bumpInto, 1, 'bump', evs, credit);
+      // 転がる物：当てた傷はもう入っている／勢いがなければ傷なし（ぶつかって止まっただけ）
+      if (bumpInto && bumpInto.team && isFoe(bumpInto) && !roll) hurt(st, bumpInto, 1, 'bump', evs, credit);
     }
     if (end === 'void') {
       if (isU) ko(st, ent, 'void', evs, credit); else ent.gone = true;
@@ -774,7 +886,7 @@
     if (end === 'fall') { const fd = ent._fallDmg; delete ent._fallDmg; hurt(st, ent, fd, 'fall', evs, credit); delete ent._drop; }
     if (!isU && end !== 'void' && end !== 'sink') afterLand(st, ent, evs, credit);
     if (isU && !ent.ko) ent.z = standZ(st, ent.x, ent.y, ent);
-    return { end, path, moved: path.length - 1, iceUsed, crushed, fromZ: path[0][2] };
+    return { end, path, moved: path.length - 1, iceUsed, crushed, rollKills, rollHit, noMomentum, fromZ: path[0][2] };
   }
   function addWho(credit, w) { if (credit && credit.who.indexOf(w) < 0) { credit.who.push(w); credit.combo = true; } }
 
@@ -796,10 +908,26 @@
     else if (!isU && r.path && r.path.length > 1 && r.path[0][2] > ent.z) t = name + 'が段の下へ落ちて、足場になった';
     else if (iceUsed && moved > 1) t = name + 'は氷の上をすべっていった';
     else t = name + 'を押した';
-    if (r.crushed) t = name + 'が転がり、' + r.crushed + '体をなぎ倒した';
+    const rc = rollCaption(st, ent, isU, r, '');
+    if (rc) t = rc;
     if (isU && ent.ko && end === 'bump') t = name + 'はぶつかって倒れた';
-    if (credit.flip && end !== 'fall') t += '（ひっくり返った！）';
+    if (credit.flip && end !== 'fall') t += flipNote(credit);
     credit.text = t;
+  }
+  // 転がる大岩の字幕。pre は「爆風で」など
+  function rollCaption(st, ent, isU, r, pre) {
+    if (isU || ent.k !== 'boulder') return '';
+    const name = objName(ent);
+    let t = '';
+    if (r.rollKills) t = pre + name + 'が転がり、' + r.rollKills + '体をなぎ倒した' + (r.rollHit ? '。' + ENEMY[r.rollHit.k].name + 'に当たって止まった' : '');
+    else if (r.rollHit) t = pre + name + 'が転がって、' + ENEMY[r.rollHit.k].name + 'に当たった';
+    else if (r.noMomentum) t = pre + name + 'は、となりの' + ENEMY[r.noMomentum.k].name + 'にぶつかって止まった（転がる勢いがないと、傷は入らない）';
+    const cap = st.capAt && st.capAt[ent.x + ',' + ent.y];
+    if (cap && r.moved && !r.rollKills && !r.rollHit) t = cap;
+    return t;
+  }
+  function flipNote(credit) {
+    return '（ひっくり返った！）';   // はじめてのときの「次の手番の終わりまで…」は、画面の見出しで出す
   }
 
   function objName(o) {
@@ -850,6 +978,7 @@
     evs.push({ k: 'topple', o: p.id, dir, x: p.x, y: p.y, z: p.z, beams: clone(beams) });
     credit.text = cells.length >= 2 ? '石柱が倒れて、橋になった' : '石柱が倒れた';
     if (credit.kills) credit.text = '石柱が倒れて、' + credit.kills + '体を押しつぶした';
+    if (credit.flip) credit.text += flipNote(credit);
   }
 
   // ---------- トビ：発破 ----------
@@ -889,7 +1018,8 @@
       if (!ent || ent.gone || ent.ko) continue;
       const r = pushEntity(st, ent, isU, it.dir, evs, credit, { dist: big ? 2 : 1, why: 'blast' });
       if (r.moved) { flung++; flungNames.push(isU ? ENEMY[ent.k].name : objName(ent)); flungEnds.push(r.end); }
-      if (r.crushed) rolled = { name: objName(ent), n: r.crushed };
+      const rc = rollCaption(st, ent, isU, r, '爆風で');
+      if (rc) rolled = rc;
       if (isU && ent.ko) felled++;
     }
     st.stats.blasts = (st.stats.blasts || 0) + 1;
@@ -900,10 +1030,10 @@
     if (credit.kills && !(flung === 1 && credit.kills === 1 && OUTCOME[flungEnds[0]])) tx = (tx ? tx + '。' : '') + '爆風で ' + credit.kills + '体を倒した';
     else if (flung === 1 && OUTCOME[flungEnds[0]]) tx = (tx ? tx + '。' : '') + '爆風で ' + flungNames[0] + 'を吹き飛ばした' + OUTCOME[flungEnds[0]];
     else if (flung) tx = (tx ? tx + '。' : '') + '爆風で ' + (flung === 1 ? flungNames[0] + 'を' : flung + 'つを') + '吹き飛ばした';
-    if (rolled) tx = '爆風で' + rolled.name + 'が転がり、' + rolled.n + '体をなぎ倒した';
+    if (rolled) tx = rolled;
     if (credit.plateLabel) tx = (tx ? tx + '。' : '') + credit.plateLabel;
     if (credit.sinkLabel) tx = (tx ? tx + '。' : '') + credit.sinkLabel;
-    if (credit.flip) tx += '（ひっくり返った！）';
+    if (credit.flip) tx += flipNote(credit);
     if (credit.clang && !credit.flip && !credit.kills && !flung) tx = '甲羅にはじかれた。落とすか、ひっくり返せば効く';
     if (!tx) tx = set.center ? ENEMY[set.center.k].name + 'に発破が命中した' : '発破した';
     credit.text = tx;
@@ -922,9 +1052,9 @@
       evs.push({ k: 'act', id: r.id, verb: 'shoot', tx: t.x, ty: t.y, tz: t.z });
       evs.push({ k: 'arrow', from: [r.x, r.y, r.z], to: [t.x, t.y, t.z], hit: true });
       hurt(st, t, n, high ? 'arrowHigh' : 'arrow', evs, credit);
-      if (credit.clang) { credit.text = '矢は甲羅にはじかれた。2段上から射るか、ひっくり返せば効く'; return; }
-      if (credit.gap && !(t.flipped > 0)) { credit.text = '高所からの矢が、甲羅のすきまに刺さった' + (t.ko ? '。倒れた' : ''); return; }
-      credit.text = ENEMY[t.k].name + 'を射た' + (high ? '（高所から）' : '') + (shatter ? '（凍って砕けやすい）' : '') + (t.ko ? '。倒れた' : '');
+      if (credit.clang) { credit.text = '矢は甲羅にはじかれた。ひっくり返せば効く（2段上からなら、すきまに傷1）'; return; }
+      if (credit.gap && !(t.flipped > 0)) { credit.text = t.ko ? '高所からの矢が、甲羅のすきまに刺さった。倒れた' : 'すきまに刺さった（傷' + (1 + (st.up.bow2 ? 1 : 0)) + '）。ひっくり返せば、もっと通る'; return; }
+      credit.text = ENEMY[t.k].name + 'を射た' + (high ? '（高所から）' : '') + (shatter ? '（凍って砕けやすい）' : '') + (t.flipped > 0 && ENEMY[t.k].armor ? '（お腹に通った）' : '') + (t.ko ? '。倒れた' : '');
       return;
     }
     const o = objById(st, ref.o);
@@ -965,6 +1095,12 @@
         evs.push({ k: 'iceblock', o: clone(b) });
         credit.kills++; st.stats.kills.sena = (st.stats.kills.sena || 0) + 1;
         credit.text = '粘体が凍って、氷のかたまりになった（押せる・のれる）';
+        return;
+      }
+      // すきの間の甲羅：凍らせても、すきは解けない。止める効果はなく、霜の傷（1＋お腹の1）だけが入る（05 1.1）
+      if (ENEMY[t.k].armor && t.flipped > 0) {
+        hurt(st, t, 1, 'frost', evs, credit);
+        credit.text = t.ko ? '霜がお腹に通って、' + ENEMY[t.k].name + 'は倒れた' : '霜がお腹に通った（すきの間は、凍らせても止まらない）';
         return;
       }
       t.frozen = 1; t.frozenBy = 'sena'; t.flipped = 0;
@@ -1174,10 +1310,13 @@
     if (!st.flags.cleared && !st.lost && objective(st).done) { st.flags.cleared = true; evs.push({ k: 'cleared' }); }
   }
 
-  function winCombat(st, evs) {
+  // len: その戦いにかかった手番（敵の手番のあとで終わったときは、その手番まで）
+  function winCombat(st, evs, len) {
     st.mode = 'explore';
-    for (const h of heroes(st)) { h.ko = false; h.hp = h.mhp; h.acted = false; h.mv = h.fixed ? 0 : HERO[h.k].mov; h.frozen = 0; }
-    evs.push({ k: 'win', grp: st.grp });
+    st.stats.fightLen = st.stats.fightLen || {};
+    st.stats.fightLen[st.grp] = len === undefined ? st.turn : len;
+    for (const h of heroes(st)) { h.ko = false; h.hp = h.mhp; h.acted = false; h.mv = h.fixed ? 0 : movOf(h); h.frozen = 0; }
+    evs.push({ k: 'win', grp: st.grp, turns: st.stats.fightLen[st.grp] });
     st.flags['won' + st.grp] = true;
     const def = st.winSay && st.winSay[st.grp];
     if (def) for (const s of def) evs.push({ k: 'say', who: s[0], text: s[1] });
@@ -1190,15 +1329,19 @@
     const evs = [];
     if (st.mode !== 'combat') return evs;
     evs.push({ k: 'phase', side: 'enemy', turn: st.turn });
+    st.phase = 'enemy';
     enemyPhase(st, evs);
+    st.phase = 'player';
     if (st.mode !== 'combat' || st.lost) return evs;
     st.turn++;
     st.stats.turns++;
     spawnWaves(st, evs);
-    for (const h of heroes(st)) { h.acted = h.ko; h.mv = h.ko || h.fixed ? 0 : HERO[h.k].mov; }
+    for (const h of heroes(st)) { h.acted = h.ko; h.mv = h.ko || h.fixed ? 0 : movOf(h); }
     evs.push({ k: 'phase', side: 'player', turn: st.turn });
+    // すきが切れる手番の始めに知らせる
+    for (const e of liveEnemies(st)) if (e.active && e.flipped === 1 && ENEMY[e.k].armor) evs.push({ k: 'caption', who: [], text: ENEMY[e.k].name + 'が起きあがろうとしている（すき あと1手番）' });
     // 波のあいまに敵がいなくなっていたら、そのまま次へ
-    if (!liveEnemies(st).filter(e => e.active).length && !pendingWaves(st)) { winCombat(st, evs); if (!st.flags.cleared && objective(st).done) { st.flags.cleared = true; evs.push({ k: 'cleared' }); } }
+    if (!liveEnemies(st).filter(e => e.active).length && !pendingWaves(st)) { winCombat(st, evs, st.turn - 1); if (!st.flags.cleared && objective(st).done) { st.flags.cleared = true; evs.push({ k: 'cleared' }); } }
     return evs;
   }
   function spawnWaves(st, evs) {
@@ -1231,22 +1374,32 @@
   }
 
   // 敵の思考（決定的）
+  // 凍って休んだ敵は、その敵の手番のあいだずっと、ほかの敵の通り道をふさぐ（iceHold。手番の終わりに消す）
   function enemyPhase(st, evs, record) {
+    try { enemyPhase0(st, evs, record); } finally { for (const u of st.units) delete u.iceHold; }
+  }
+  function enemyPhase0(st, evs, record) {
     const list = liveEnemies(st).filter(e => e.active).sort((a, b) => (a.id.length - b.id.length) || (a.id < b.id ? -1 : 1));
     for (const e of list) {
       if (e.ko) continue;
       if (e.frozen > 0) {
         e.frozen--;
+        e.iceHold = true;
         if (ENEMY[e.k].armor) e.resist = 1;
         evs.push({ k: 'frozenSkip', id: e.id, left: e.frozen, resist: !!ENEMY[e.k].armor });
         if (record) record.push({ id: e.id, frozen: true });
         continue;
       }
-      if (e.flipped > 0) {
-        e.flipped--;
+      // すき：2 なら休んで 1 に（次の自分の手番もお腹が出たまま）。1 なら起きあがって、ふつうに動く
+      if (e.flipped >= 2) {
+        e.flipped = 1;
         evs.push({ k: 'flipSkip', id: e.id, left: e.flipped });
-        if (record) record.push({ id: e.id, flipped: true });
+        if (record) record.push({ id: e.id, flipped: true, rest: true });
         continue;
+      }
+      if (e.flipped === 1) {
+        e.flipped = 0;
+        evs.push({ k: 'flipUp', id: e.id });
       }
       const E = ENEMY[e.k];
       if (!record) e.resist = 0;
@@ -1335,8 +1488,9 @@
       }
       if (goal === null) {
         // どこへも行けない敵は、しばらくすると逃げていく（行き詰まりを防ぐ）
-        if (!record) { e.stuck = (e.stuck || 0) + 1; if (e.stuck >= 2 && !e.boss) { e.ko = true; e.gone = true; evs.push({ k: 'flee', id: e.id }); continue; } }
-        if (record) record.push({ id: e.id, idle: true, stuck: (e.stuck || 0) + 1 >= 2 && !e.boss });
+        const lim = E.raid ? STUCK.raid : STUCK.normal;
+        if (!record) { e.stuck = (e.stuck || 0) + 1; if (e.stuck >= lim && !e.boss) { e.ko = true; e.gone = true; evs.push({ k: 'flee', id: e.id }); continue; } }
+        if (record) record.push({ id: e.id, idle: true, stuck: (e.stuck || 0) + 1 >= lim && !e.boss, wait: E.raid ? Math.max(0, lim - (e.stuck || 0) - 1) : 0 });
         continue;
       }
       e.stuck = 0;
@@ -1365,11 +1519,18 @@
     return r;
   }
 
+  // 手番を終えたときの敵の動き（画面の赤い線）。rec.heroes に、仲間それぞれの見こみ（体力・倒れる・こらえる）
   function intents(st) {
     if (st.mode !== 'combat') return [];
     const c = clone(st);
+    c.phase = 'enemy';
     const rec = [];
-    enemyPhase(c, [], rec);
+    const rising = new Set(liveEnemies(st).filter(e => e.flipped === 1).map(e => e.id));
+    const evs = [];
+    enemyPhase(c, evs, rec);
+    for (const r of rec) if (rising.has(r.id)) r.rise = true;
+    rec.heroes = {};
+    for (const h of heroes(c)) rec.heroes[h.id] = { hp: h.hp, ko: !!h.ko, endure: evs.some(e => e.k === 'endure' && e.id === h.id) };
     return rec;
   }
 
@@ -1427,7 +1588,7 @@
   }
 
   const api = {
-    DIRS, HERO, COMPANIONS, ENEMY, NPC, RANGE, OBJ_H, PUSHABLE,
+    DIRS, HERO, COMPANIONS, ENEMY, NPC, RANGE, OBJ_H, PUSHABLE, CHARM_FX, STUCK, movOf, speaker,
     clone, idx, inside, inRange, create, surface, standZ, canStep, reach, pathTo, partyReach,
     plan, apply, preview, options, intents, endPlayerPhase, startCombat, wakeCheck, triggersAt, objective, nextWave, runeCount,
     unitById, objById, unitAt, heroes, npcs, enemies, liveEnemies, freezeCells, pushInfo, objName, whyNot, isHero, isNpc, isFoe, fly, faceTo,

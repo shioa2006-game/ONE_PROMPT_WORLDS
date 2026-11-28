@@ -73,7 +73,8 @@
     winSay: { 1: [['riko', 'やった！ はじめての依頼、達成だね！']] },
     hints: [
       { done: [9, 5], need: 'push', o: 'o1', mark: [9, 7], text: '高い段のすぐ下（光る升）へ木箱を押せば、足場になる',
-        wrong: '木箱は Z で戻せる。高い段のすぐ下、光る升へ押せば足場になる' },
+        wrong: '木箱は Z で戻せる。高い段のすぐ下、光る升へ押せば足場になる',
+        alt: { need: 'blast', mark: [9, 9], text: '木箱の手前（光る升）で発破すれば、高い段のすぐ下へ吹き飛んで足場になるっす' } },   // 受けなおし（ガルドがいない編成）用（v0.2）
       { done: [3, 4], need: 'rope', mark: 'o2', text: '谷の向こうの鉄の輪に、ぼくの鉤縄をかければ渡れるよ' },
       { done: [2, 1], need: 'freeze', mark: [2, 2], text: '（寄り道）池を凍らせれば、奥の箱まで歩いて渡れます' },
     ],
@@ -156,7 +157,8 @@
       { done: [6, 7], need: 'freeze', mark: [6, 9], text: '堀の水を凍らせれば、氷の上を歩いて渡れます' },
       { done: [6, 4], need: 'rope', mark: 'o2', text: '塔の中段の鉄の輪に、鉤縄をかけよう' },
       { done: [5, 2], need: 'push', o: 'o1', mark: [7, 2], text: '台の上の木箱を、てっぺんの段のすぐ下（光る升）へ落とせば、足場になる',
-        wrong: '木箱は Z で戻せる。てっぺんのすぐ下の光る升へ落とそう' },
+        wrong: '木箱は Z で戻せる。てっぺんのすぐ下の光る升へ落とそう',
+        alt: { need: 'blast', mark: [9, 2], text: '台の上の木箱の奥（光る升）で発破すれば、てっぺんの段のすぐ下へ落とせるっす' } },   // 受けなおし（ガルドがいない編成）用（v0.2）
       { done: [0, 1], need: 'shoot', mark: 'o4', text: '（寄り道）塔の壁の的を射れば、左の古い倉がひらくかも' },
     ],
     combatHint: [['riko', '中段の射手には、縄でのぼって近くから射るといいよ'], ['gard', '堀のそばの敵は、押せば水に沈む']],
@@ -367,7 +369,7 @@
       '553333333333555',
       '553333333333555',
       '553333333333555',
-      '333333333333333',
+      '333333333333433',   // (12,11) は高さ4：南の岸から右の丘へ上がる段（v0.2）
       '333333333333333',
       '333333333333333',
       '333333333333333',
@@ -391,8 +393,8 @@
     ],
     objs: [
       { k: 'deco', sub: 'granary', x: 7, y: 12, h: 3 },
-      { k: 'boulder', x: 1, y: 7 },
-      { k: 'boulder', x: 12, y: 8 },
+      { k: 'boulder', x: 4, y: 8 },     // 橋の列の手前（v0.2。北へ押すと橋をぬけて北の岸 (4,3) で止まる）
+      { k: 'boulder', x: 11, y: 8 },    // 飛び石の列の手前（v0.2。北へ押すと飛び石 (11,5) の上で止まり、渡り口をふさぐ）
       { k: 'deco', sub: 'house', x: 2, y: 13, h: 3 },
       { k: 'deco', sub: 'house', x: 12, y: 13, h: 3 },
       { k: 'deco', sub: 'tree', x: 0, y: 0, h: 3 },
@@ -401,6 +403,10 @@
       { k: 'deco', sub: 'fence', x: 5, y: 12, h: 1 },
       { k: 'deco', sub: 'fence', x: 9, y: 12, h: 1 },
       { k: 'wagon', x: 14, y: 14 },
+      // 左の崖の上は、だれも上がれないまま。木と岩だけの景色（v0.2）
+      { k: 'deco', sub: 'tree', x: 0, y: 8, h: 3 },
+      { k: 'deco', sub: 'rock', x: 1, y: 7, h: 1 },
+      { k: 'deco', sub: 'rock', x: 0, y: 10, h: 1 },
     ],
     start: [[7, 9, 3], [6, 9, 3], [8, 9, 3]],
     enemies: [
@@ -421,10 +427,13 @@
       ['riko', '川の向こうから、盗っ人小鬼が来る…！'],
       ['narr', '盗っ人小鬼は、米倉へ一直線。じゃまする者だけをたたく'],
     ],
-    fightSay: { 1: [['gard', '渡り口は橋と、右の飛び石。そこで止めるぞ'], ['riko', '赤い線の先が、小鬼の行き先だよ']] },
+    fightSay: { 1: [['gard|tobi', { gard: '橋の手前と、飛び石の手前に大岩だ。橋に並んだら、転がすぞ', tobi: '橋の手前と、飛び石の手前に大岩っす。橋に並んだら、転がすっす！' }], ['riko', '赤い線の先が、小鬼の行き先だよ。並ぶのを待とう']] },
     winSay: { 1: [['riko', '守りきったー！'], ['narr', '村の人たちが、米倉のかげから出てきた']] },
     hints: [],
-    combatHint: [['gard', '橋の上の小鬼は、押せば川へ落ちる。わしが橋に立てば、ふさげるぞ'], ['tb', '橋の上で発破すれば、まとめて川へ吹っ飛ばせるっす'], ['sena', '橋の上で凍らせれば、うしろの小鬼も通れません'], ['riko', '左右の崖の上の大岩は、押せば転がって列をなぎ倒すよ']],
+    combatHint: [['riko', '橋の手前の大岩を北へ転がすと、橋の上の列をなぎ倒すよ'], ['gard', '飛び石の手前の大岩は、北へ押せば飛び石の上で止まる。右はふさがるぞ'], ['riko', '右の丘へは、南から上がれる。上からの矢は強いよ'],
+      ['gard', '橋の上の小鬼は、押せば川へ落ちる。わしが橋に立てば、ふさげるぞ'], ['tb', '橋の上で発破すれば、まとめて川へ吹っ飛ばせるっす'], ['sena', '橋の上で凍らせれば、うしろの小鬼も通れません']],
+    capAt: { '11,5': '大岩が飛び石をふさいだ。盗っ人は橋へ回る' },
+    rollSay: [['riko', 'やったー！ まとめて！']],
     bg: { top: '#2a3c5c', mid: '#3e5478', bot: '#16202e', ridge: '#1e2c44', sky: true, sunset: true },
     music: 'battle2',
   });
@@ -470,10 +479,10 @@
       'mmmmmmmmmmmmmmm',
     ],
     objs: [
-      { k: 'boulder', x: 4, y: 3 },
-      { k: 'boulder', x: 10, y: 3 },
-      { k: 'pillar', x: 2, y: 6 },
-      { k: 'pillar', x: 12, y: 6 },
+      { k: 'boulder', x: 1, y: 6 },     // 中段の西の端（v0.2）。列 y=6 を東へ転がる
+      { k: 'boulder', x: 13, y: 6 },    // 中段の東の端（v0.2）。列 y=6 を西へ転がる
+      { k: 'pillar', x: 2, y: 9 },      // 下の段（v0.2）。大岩の列をふさがない。東へ倒すと (3,9)〜(5,9)
+      { k: 'pillar', x: 12, y: 9 },     // 下の段（v0.2）。西へ倒すと (11,9)〜(9,9)
       { k: 'wagon', x: 13, y: 14 },
       { k: 'torch', x: 1, y: 1, fz: 2 },
       { k: 'torch', x: 13, y: 1, fz: 2 },
@@ -491,15 +500,16 @@
     ],
     objective: { k: 'boss' },
     startFight: 1,
-    goalText: (st, o) => o.done ? '岩喰い大亀を倒した！' : '岩喰い大亀を倒す（体力 ' + o.hp + '）　段から落とすと、ひっくり返る',
+    goalText: (st, o) => o.done ? '岩喰い大亀を倒した！' : '岩喰い大亀を倒す（体力 ' + o.hp + '）　ひっくり返すと、次の手番の終わりまでお腹が出る',
     enterSay: [
       ['narr', '谷のまんなかの円舞台に、岩のような甲羅が、のそりと動いた'],
       ['sena', '石板のとおり…。甲羅は矢も爆風もはじきます。でも、ひっくり返せば'],
     ],
-    fightSay: { 1: [['gard', '段から落とせば、ひっくり返るはずだ'], ['riko', 'ひっくり返ったら、みんなでお腹をねらおう！']] },
+    fightSay: { 1: [['riko', '赤い線…あいつ、ぼくのとなりへ来るつもりだ。ここに立ってれば、あの大岩の通り道だよ！']] },
     winSay: { 1: [['riko', 'やった…！ 大亀、倒したよ！'], ['gard', '…見事だ。三人とも']] },
     hints: [],
-    combatHint: [['gard', '大亀を段のふちへさそいこめ。2段以上落とせば、ひっくり返る'], ['sena', '凍らせれば、押すとすべって段から落ちます'], ['tb', '重い大亀も、爆風なら吹っ飛ぶっす！ 段のふちで！'], ['riko', 'ひっくり返った大亀は、次の手番うごけない。お腹は矢も効くよ'], ['gard', '上の段の大岩を転がしてぶつけても、ひっくり返るぞ']],
+    combatHint: [['gard', '大亀は、ねらった相手のとなりで止まる。大岩の通り道に立ってさそえ'], ['riko', 'ひっくり返すと、次の手番の終わりまでお腹が出るよ。そこで全員で！'], ['sena', '凍らせれば、押すとすべって段から落ちます'], ['tb', 'ふちの手前で発破すれば、落ちるっす'], ['gard', '下の段の石柱は、鋼の籠手があれば倒せる']],
+    flipSay: [['gard|tobi|sena', { gard: 'いまだ、たたみかけろ！', tobi: 'いまっす！ たたみかけるっす！', sena: 'いまです、たたみかけましょう！' }]],
     bg: { top: '#3a2a4a', mid: '#4a3858', bot: '#18121e', ridge: '#2a1e34', sky: true, sunset: true },
     music: 'boss',
   });
@@ -576,7 +586,7 @@
       { when: () => true, text: ['ようこそ、風見鶏ギルドへ！ …って、リコくんはもう知ってるか。依頼は、うしろの依頼板からね'] },
     ],
     dora: [
-      { when: (p) => p.chapterDone, text: ['北の峠のむこうから、手紙が届いた。「風が止んだ谷が、ほかにもある」とな', '…まあ、今夜は飲もう。続きは、また明日だ'] },
+      { when: (p) => p.chapterDone, text: ['北の峠のむこうから、手紙が届いた。「風が止んだ谷が、ほかにもある」とな', '灰色の狼の頭はロウといってね。ガルドとあたしの、昔の仲間さ', '…まあ、今夜は飲もう。続きは、また明日だ'] },
       { when: (p) => p.rank >= 3, text: ['腕ききか。ガルド、あんたと組んでた頃を思いだすよ', '大亀の噂、聞いてるね。準備ができたら行っといで'] },
       { when: (p) => p.roster.includes('tobi'), text: ['トビは鉱山町の発破師だ。荒っぽく見えて、仕事は丁寧さ', '三人で行くのは変わらない。だれを連れていくかは、あんたが決めな'] },
       { when: (p) => p.rank >= 2, text: ['一人前の札、似合ってるじゃないか。依頼の格も上がるよ'] },
@@ -586,7 +596,7 @@
       { when: () => true, text: ['よう、リコ。依頼でかせいだ銀貨で、仲間の道具を鍛えてやるぜ'] },
     ],
     gard: [
-      { when: (p) => p.chapterDone, text: ['いい依頼ばかりだった。…次は、どこへ行く？'] },
+      { when: (p) => p.chapterDone, text: ['いい依頼ばかりだった', '…ロウのやつ、便りもよこさんで。北の峠か'] },
       { when: (p) => p.done.m6, text: ['大亀か。わしが若いころは、あんなのに出くわさなかったぞ'] },
       { when: (p) => p.up.gauntlet, text: ['この籠手なら、岩人形だろうが押しかえせる。トンボのやつ、いい仕事をする'] },
       { when: (p) => p.roster.includes('tobi'), text: ['トビの発破か。わしの「押す」と似ているようで、ちがう。一度に何もかも吹っ飛ばす'] },
@@ -624,7 +634,7 @@
       goal: '段々畑の上の小鬼を3体たおす', reward: { coins: 80, merit: 1 }, trophy: 'pumpkin',
       features: ['高い段差', '谷', '池'], need: '押す・鉤縄・凍らせる、みんな出番あり',
       unlock: () => true, fixed: true,
-      say: { gard: 'はじめての依頼か。肩の力をぬいていけ', sena: 'よろしくお願いします、リコさん' },
+      say: { gard: 'はじめての依頼か。肩の力をぬいていけ', sena: 'よろしくお願いします、リコさん', tobi: '木箱なら、発破でも動かせるっす！' },
     },
     {
       id: 'm2', map: 'm2', title: '見張り塔の角笛', kind: '宝物回収', client: '町の顔役', area: 'カザミ東の見張り塔', stars: 1,
@@ -632,14 +642,16 @@
       goal: '塔のてっぺんの角笛を手に入れる', reward: { coins: 120, merit: 1, item: 'rope2' }, trophy: 'flag',
       features: ['堀', '高い塔', '骨の射手'], need: '堀を渡る・塔をのぼる',
       unlock: (p) => !!p.done.m1, fixed: true,
-      say: { gard: '塔か。高い所の射手は手ごわいぞ', sena: '堀は、わたしが凍らせます' },
+      // v0.2：受けなおしは自由編成。ガルドとトビでは堀を渡る手がない（設計の見直し待ち。VERIFICATION_v0.2.md）
+      replayWarn: { 'gard+tobi': 'この二人では、堀を渡る手がない（凍らせられる仲間がいれば渡れる）' },
+      say: { gard: '塔か。高い所の射手は手ごわいぞ', sena: '堀は、わたしが凍らせます', tobi: '塔の上の木箱なら、発破で落とせるっす' },
     },
     {
       id: 'm3', map: 'm3', title: '石切り場の落盤', kind: '救助・急ぎ', client: '石切り場の親方', area: 'カザミ北の石切り場', stars: 2,
       text: '【急ぎ】石切り場で落盤だ！ 鉱夫が二人と、発破師の若いのがひとり取り残された。だれか、たのむ！',
       goal: '取り残された3人を、荷馬車まで送りとどける', reward: { coins: 150, merit: 2 }, trophy: 'stone',
       features: ['ひび割れた岩', '岩棚', '凍る滝'], need: '見つけるだけでなく、帰り道をつくる',
-      unlock: (p) => !!p.done.m2, fixed: true,
+      unlock: (p) => !!p.done.m2, fixed: true, noPick: ['tobi'],   // 受けなおしでも、トビは岩棚にいる側なので選べない
       say: { gard: '急ぐぞ。けが人は、縄では運べん。歩ける道をつくってやらねば', sena: '帰り道…。氷の段なら、歩いて下りられます' },
     },
     {
@@ -654,22 +666,81 @@
       id: 'm5', map: 'm5', title: '川辺の村の米倉', kind: '防衛', client: '川辺の村の長ヨシノ', area: 'カザミ川の村', stars: 2,
       text: '盗っ人小鬼の群れが、毎晩のように米倉をねらってきます。今夜が山。どうか米俵を守ってください。',
       goal: '三つの波をしのぎ、米俵を守る（ひと俵でも残れば成功）', reward: { coins: 150, merit: 2, perSack: 20 }, trophy: 'banner',
-      features: ['橋', '飛び石', '流れの速い川', '崖の上の大岩'], need: '渡り口で止める・まとめて川へ落とす',
+      features: ['橋', '飛び石', '流れの速い川', '渡り口の大岩'], need: '渡り口で止める・並んだ所へ大岩を転がす',
       unlock: (p) => !!p.done.m3,
-      say: { gard: '橋はわしがふさぐ。押せば川へ落ちる', sena: '橋の上で凍らせれば、通せんぼになります', tobi: '橋の上で発破すれば、まとめて川っす！' },
+      say: { gard: '橋の手前に大岩がある。並んだ所へ転がせば、まとめてだ', sena: '橋の出口で凍らせれば、うしろが橋の上に並びます', tobi: '大岩のうしろで発破すれば、橋をぬけて転がるっす！' },
     },
     {
       id: 'm6', map: 'm6', title: '岩喰い大亀', kind: '強敵討伐・急ぎ', client: 'ギルドマスター・ドーラ', area: '風見の谷の円舞台', stars: 3,
       text: '【急ぎ】風見の谷に、岩を喰う大亀があらわれた。谷の風が止まり、町の風見鶏も回らない。腕ききの三人で、止めてきな。',
       goal: '岩喰い大亀を倒す', reward: { coins: 200, merit: 3 }, trophy: 'shell', final: true,
-      features: ['三段の円舞台', '大岩', '甲羅（ひっくり返すと効く）'], need: '段から落とす・大岩をぶつける',
+      features: ['三段の円舞台', '中段の左右の大岩', '甲羅（ひっくり返すと効く）'], need: '大亀は、ねらった仲間のとなりで止まる。大岩の列へさそう・段から落とす',
       unlock: (p) => !!p.done.m4 && !!p.done.m5,
-      say: { gard: '甲羅は硬い。段のふちへさそえば、わしが押し落とせる。鋼の籠手なら平らな所でも押せる', sena: '凍らせれば、押したときにすべります', tobi: '重い大亀も、爆風なら吹っ飛ぶっす' },
+      say: { gard: '中段の端に大岩がある。あれの通り道で大亀を止めてくれ。わしが転がす', sena: '凍らせれば、押したときにすべります。ひっくり返っている間は、霜もお腹に通ります', tobi: '大岩のうしろで発破すれば、端から端まで転がるっす。大亀も、ふちなら爆風で落ちるっす' },
     },
   ];
 
   // 第二章の予告（まだ受けられない）
-  const TEASER = { id: 'ch2', title: '北の峠の風', kind: '第二章', client: '？？？', text: '「風が止んだ谷が、ほかにもある」――北の峠から届いた手紙。（この依頼は、まだ準備中）' };
+  const TEASER = { id: 'ch2', title: '北の峠の風', kind: '第二章', client: '？？？', text: '「風が止んだ谷が、ほかにもある」――北の峠から届いた手紙。北の峠へ向かった「灰色の狼」も、まだ戻らない。（この依頼は、まだ準備中）' };
+
+  // ---------- 腕だめしの印（依頼ごとに三つ：①発見 ②腕前 ③別の二人。一つにつき一度きり） ----------
+  // test(st, info)：依頼を達成してギルドへ帰ったときの地図の状態で判定する。info = { first, pair, firstPair }
+  // live: 'now' は条件を満たしたその場で地図に知らせる／'end' は依頼を達成したときに知らせる
+  const koCount = (st, kinds, hows) => (st.stats.foeKo || []).filter(e => (!kinds || kinds.includes(e.k)) && hows.includes(e.how)).length;
+  const pairStamp = (id) => ({ id, kind: 'pair', name: '別の二人', text: '初回と違う二人で達成する', live: 'end', test: (st, i) => !i.first && !!i.firstPair && i.pair !== i.firstPair });
+  const STAMPS = {
+    m1: [
+      { id: 'm1a', kind: 'find', name: '崖から押し落とす', text: '小鬼を崖から押し落として倒す', live: 'now', test: (st) => koCount(st, ['goblin'], ['fall', 'void']) >= 1 },
+      { id: 'm1b', kind: 'skill', name: '3手番で片づける', text: '戦いを3手番以内に終える', live: 'now', test: (st) => !!st.stats.fightLen && st.stats.fightLen[1] !== undefined && st.stats.fightLen[1] <= 3 },
+      pairStamp('m1c'),
+    ],
+    m2: [
+      { id: 'm2a', kind: 'find', name: '堀に沈める', text: '敵を堀の水に沈める', live: 'now', test: (st) => koCount(st, null, ['drown']) >= 1 },
+      { id: 'm2b', kind: 'skill', name: 'だれも倒れない', text: 'だれも倒れずに達成', live: 'end', test: (st) => !(st.stats.downs > 0) },
+      pairStamp('m2c'),
+    ],
+    m3: [
+      { id: 'm3a', kind: 'find', name: '岩人形を池へ', text: '岩人形を池に沈める', live: 'now', test: (st) => koCount(st, ['golem'], ['drown']) >= 1 },
+      { id: 'm3b', kind: 'skill', name: 'ヒントなしで救出', text: 'ヒントを使わずに三人を助ける', live: 'end', test: (st) => !(st.stats.hints > 0) },
+      pairStamp('m3c'),
+    ],
+    m4: [
+      { id: 'm4a', kind: 'find', name: '灯を四つとも', text: '門の灯を四つともともす', live: 'now', test: (st) => ['r1', 'r2', 'r3', 'r4'].every(f => st.flags[f]) },
+      { id: 'm4b', kind: 'skill', name: '岩人形を二体とも落とす', text: '岩人形を二体とも、谷か池へ落とす', live: 'now', test: (st) => koCount(st, ['golem'], ['void', 'drown']) >= 2 },
+      pairStamp('m4c'),
+    ],
+    m5: [
+      { id: 'm5a', kind: 'find', name: '大岩で3体', text: '大岩ひとつで3体以上をなぎ倒す', live: 'now', test: (st) => (st.stats.bestRoll || 0) >= 3 },
+      { id: 'm5b', kind: 'skill', name: '米俵を三つとも', text: '米俵を三つとも守る', live: 'end', test: (st) => !!st.raid && st.raid.sacks >= 3 },
+      pairStamp('m5c'),
+    ],
+    m6: [
+      { id: 'm6a', kind: 'find', name: '大岩で大亀を返す', text: '大岩を当てて、大亀をひっくり返す', live: 'now', test: (st) => (st.stats.boulderFlip || 0) >= 1 },
+      { id: 'm6b', kind: 'skill', name: '8手番で討伐', text: '8手番以内に倒す', live: 'now', test: (st) => st.stats.bossTurn > 0 && st.stats.bossTurn <= 8 },
+      pairStamp('m6c'),
+    ],
+  };
+  const STAMP_KIND = { find: '発見', skill: '腕前', pair: '別の二人' };
+
+  // ---------- ドーラの腕だめし帳（印の数のごほうび。届いた段は、ドーラに話して受けとる） ----------
+  const LEDGER = [
+    { n: 3, charm: 'c_tag' },
+    { n: 6, coins: 100 },
+    { n: 9, charm: 'c_tabi' },
+    { n: 12, coins: 100 },
+    { n: 16, trophy: 'oldbook', coins: 150 },
+    { n: 20, coins: 150 },
+    { n: 24, title: '腕だめしの達人', trophy: 'vane_s' },
+    { n: 30, trophy: 'vane_g' },
+    { n: 42, title: '風見鶏の誇り' },
+  ];
+
+  // ---------- お守り（一人に一つ。同じ物は二つとない。効果は sim.js の CHARM_FX） ----------
+  const CHARMS = {
+    c_plate: { name: 'かたい胸当て', text: '持たせた人の体力 +2', from: 'トンボの鍛冶場（石切り場の依頼のあと）' },
+    c_tag: { name: '身がわりの木札', text: '倒れる傷を、依頼ごとに一度だけ体力1でこらえる', from: 'ドーラの腕だめし帳（印3つ）' },
+    c_tabi: { name: '韋駄天の足袋', text: '移動 +1', from: 'ドーラの腕だめし帳（印9つ）' },
+  };
 
   // ---------- 鍛冶屋の品 ----------
   const SHOP = [
@@ -677,6 +748,8 @@
     { id: 'staff', who: 'sena', name: '氷晶の杖', cost: 160, text: '届く距離 +1。乾いた床に氷のかたまりをつくれる（足場・壁・すべる石になる）', when: (p) => !!p.done.m2 },
     { id: 'gauntlet', who: 'gard', name: '鋼の籠手', cost: 180, text: '重い相手（岩人形・大亀）を、平らな所でも押せる。石柱を倒して橋にできる', when: (p) => !!p.done.m2 },
     { id: 'bigbomb', who: 'tobi', name: '大玉の発破', cost: 160, text: '爆心の傷 +1。爆風で2マス吹き飛ばす', when: (p) => p.roster.includes('tobi') },
+    // お守り（「だれと行く？」で一人に一つ持たせる）
+    { id: 'c_plate', kind: 'charm', name: 'かたい胸当て', cost: 150, text: '持たせた人の体力 +2（「だれと行く？」で、一人に一つ持たせる）', when: (p) => !!p.done.m3 },
   ];
 
   // ギルドに飾るもの
@@ -687,6 +760,9 @@
     tablet: { name: '風見の石板（写し）', from: '風見の遺跡' },
     banner: { name: '川辺の村の感謝の旗', from: '川辺の村' },
     shell: { name: '大亀の甲羅のかけら', from: '風見の谷' },
+    oldbook: { name: 'ドーラの古い依頼帳', from: '腕だめし帳（印16）' },
+    vane_s: { name: '風見鶏の小さな像', from: '腕だめし帳（印24）' },
+    vane_g: { name: '金の風見鶏', from: '腕だめし帳（印30）' },
   };
   const ITEM = { rope2: '長い鉤縄', horn: '見張りの角笛', tablet: '風見の石板' };
 
@@ -695,6 +771,9 @@
     { star: 2, name: '一人前', merit: 2 },
     { star: 3, name: '腕きき', merit: 6 },
     { star: 4, name: '風見の星', merit: 11 },
+    { star: 5, name: '峠の案内人', merit: 15 },
+    { star: 6, name: '風呼びの星', merit: 24 },
+    { star: 7, name: '峠越えの星', merit: 32 },
   ];
 
   const TEXT = { title: 'GUILDWARD' };
@@ -715,13 +794,14 @@
 
   // 帰還したときの、ギルドでの小さな場面（依頼ごと）
   const RETURN_SAY = {
-    m1: [['mimoza', 'おかえり！ はじめての依頼、達成ね。ハンスさんが、お礼を言いに来てるわよ'], ['hans', 'ありがとよ！ うちのかぼちゃ、棚に飾っとくれ']],
+    m1: [['mimoza', 'おかえり！ はじめての依頼、達成ね。ハンスさんが、お礼を言いに来てるわよ'], ['hans', 'ありがとよ！ うちのかぼちゃ、棚に飾っとくれ'], ['mimoza', '依頼板の札の ◇ は腕だめし。別のやり方でこなすと、印がつくの']],
     m2: [['dora', '角笛が鳴るのは何年ぶりかね。リコ、今日から一人前だ'], ['mimoza', '顔役さんから、昔の見張りが使っていた長い鉤縄をもらったわ。遠くの輪まで届くそうよ']],
-    m3: [['bolo', 'トビを、仲間を助けてくれて…ありがとな'], ['tobi', 'あの…おいら、このギルドに入れてもらえないっすか？ 恩は、発破で返すっす！'], ['dora', 'いい度胸だ。今日から、うちの冒険者だよ']],
+    m3: [['bolo', 'トビを、仲間を助けてくれて…ありがとな'], ['tobi', 'あの…おいら、このギルドに入れてもらえないっすか？ 恩は、発破で返すっす！'], ['dora', 'いい度胸だ。今日から、うちの冒険者だよ'], ['dora', '済んだ依頼も、だれとでも受けなおせるよ。腕だめし帳、つけておくからね']],
     m4: [['sena', '石板の文字…「大亀が目ざめるとき、谷に風が止む」。いやな予感がします']],
     m5: [['elder', '米俵を守ってくれた、と村じゅうが大さわぎです。どうぞ、この旗を']],
     m6: [['dora', 'よくやった。今夜は、ギルドじゅうでお祝いだ']],
   };
 
-  root.D21 = { MAPS, HUB, PEOPLE, TALK, REQUESTS, TEASER, SHOP, TROPHY, ITEM, RANKS, TEXT, PROLOGUE, EPILOGUE, RETURN_SAY, map: (id) => MAPS[id], req: (id) => REQUESTS.find(r => r.id === id) };
+  root.D21 = { MAPS, HUB, PEOPLE, TALK, REQUESTS, TEASER, SHOP, TROPHY, ITEM, RANKS, TEXT, PROLOGUE, EPILOGUE, RETURN_SAY, STAMPS, STAMP_KIND, LEDGER, CHARMS,
+    map: (id) => MAPS[id], req: (id) => REQUESTS.find(r => r.id === id), stamp: (id) => { for (const k in STAMPS) { const s = STAMPS[k].find(q => q.id === id); if (s) return Object.assign({ req: k }, s); } return null; } };
 })(typeof window !== 'undefined' ? window : globalThis);
