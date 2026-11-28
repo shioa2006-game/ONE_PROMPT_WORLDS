@@ -66,5 +66,22 @@ window.OPW_BEYOND = [
     controls: 'マウス',
     ai: 'Claude Opus 5.5',
     accent: '#e3b955'
+  },
+  {
+    title: 'GUILDWARD',
+    genre: 'ギルドRPG・クォータービュー攻略',
+    description: '丘の町カザミの 冒険者ギルド「風見鶏」。正式な冒険者に なったばかりの 少年斥候リコが、依頼板から 依頼を選び、同行する 仲間を 二人 選んで 出かける。押す、凍らせる、吹き飛ばす。連れていく 仲間しだいで、攻略の 道すじが 変わる。',
+    path: 'beyond2/index.html',
+    basedOn: ['game21'],
+    status: 'dev',
+    version: '0.1',
+    updatedDate: '2026-11-28',
+    changelog: 'https://github.com/shioa2006-game/ONE_PROMPT_WORLDS/blob/main/beyond2/CHANGELOG.md',
+    thumbnail: 'assets/thumbs/beyond2.webp',
+    thumbnailSmall: 'assets/thumbs/beyond2-640.webp',
+    thumbnailAlt: '「GUILDWARD」のタイトル画面。夕焼けの丘に浮かぶ小さな高台に、斥候リコ・重戦士ガルド・氷の術師セナと荷馬車が並び、右上で金色の風見鶏が回っている。',
+    controls: 'マウス',
+    ai: 'Claude Opus 5.5',
+    accent: '#e8c860'
   }
 ];
